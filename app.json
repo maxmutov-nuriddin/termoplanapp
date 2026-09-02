@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "TermoPlan",
+    "slug": "termoplan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0284C7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "uz.termoplan.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0284C7"
+      },
+      "package": "uz.termoplan.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
