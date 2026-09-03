@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { G, Polyline, Path, Rect, Text as SvgText, Defs, ClipPath, Polygon, Circle } from 'react-native-svg';
+import { G, Path, Rect, Text as SvgText, Circle } from 'react-native-svg';
 import { IPoint, IWall, IInteriorWall, IDoor, IWindow } from '../../types';
 import { generateRealisticFloorHeating, PIXELS_PER_METER } from '../../utils/geometry';
 
 /**
- * PEX Quvurlarning burchaklardagi silliq fizik bukilish radiusi (R = 8px ≈ 80-100mm)
+ * PEX Quvurlarning burchaklardagi silliq fizik bukilish radiusi (R = 7px)
  */
 function parsePointsStringToSmoothPath(pointsStr: string, radius = 7): string {
   if (!pointsStr) return '';
@@ -99,11 +99,6 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
     [roomPoints]
   );
 
-  const clipPolygonStr = useMemo(() => {
-    if (valid.length < 3) return '';
-    return valid.map((p) => `${p.x * scale + padding},${p.y * scale + padding}`).join(' ');
-  }, [valid, scale, padding]);
-
   const { circuits, boilerSupplyMain, boilerReturnMain } = useMemo(() => {
     if (valid.length < 3) return { circuits: [], boilerSupplyMain: undefined, boilerReturnMain: undefined, feedPoints: '', returnPoints: '', totalLengthM: 0 };
     return generateRealisticFloorHeating(
@@ -128,12 +123,6 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
 
   return (
     <G>
-      <Defs>
-        <ClipPath id="roomHeatingClip">
-          <Polygon points={clipPolygonStr} />
-        </ClipPath>
-      </Defs>
-
       <G transform={`translate(${padding}, ${padding})`}>
         {/* 1. KOTYOL VA KOLLEKTOR O'RTASIDAGI ASOSIY 2 TA MAGISTRAL TRUBA */}
         {boilerSupplyMain && (
@@ -159,32 +148,23 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
           />
         )}
 
-        {/* 2. XONALAR ICHIDAGI KONTURLAR (Har bir xona mustaqil toza silliq kontur) */}
-        {/* We don't apply the clipPath here because we want to see if the algorithm itself stays inside the room!
-            The polygon-offset algorithm guarantees it. If we clip, we hide bugs. Let's rely on the math.
-            But we'll keep the clip just in case, wait, if we clip, the clip path is ALREADY translated because
-            clipPolygonStr has +padding inside it! So clipPath shouldn't be inside the translated group, OR
-            clipPolygonStr should NOT have +padding!
-        */}
-        <G clipPath="url(#roomHeatingClip)" transform={`translate(${-padding}, ${-padding})`}>
-           {/* wait, if clipPolygonStr has padding, and we are inside translate(padding), we must translate back for the clip OR draw pipes shifted */}
-           <G transform={`translate(${padding}, ${padding})`}>
-            {circuits.map((circuit, idx) => {
-              const feedPath = parsePointsStringToSmoothPath(circuit.feedPoints, 7);
-              const returnPath = parsePointsStringToSmoothPath(circuit.returnPoints, 7);
+        {/* 2. XONALAR ICHIDAGI KONTURLAR */}
+        <G>
+          {circuits.map((circuit, idx) => {
+            const feedPath = parsePointsStringToSmoothPath(circuit.feedPoints, 7);
+            const returnPath = parsePointsStringToSmoothPath(circuit.returnPoints, 7);
 
-              return (
-                <G key={circuit.id || idx}>
-                  {feedPath ? (
-                    <Path d={feedPath} fill="none" stroke="#EF4444" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity={0.95} />
-                  ) : null}
-                  {returnPath ? (
-                    <Path d={returnPath} fill="none" stroke="#2563EB" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" opacity={0.92} />
-                  ) : null}
-                </G>
-              );
-            })}
-          </G>
+            return (
+              <G key={circuit.id || idx}>
+                {feedPath ? (
+                  <Path d={feedPath} fill="none" stroke="#EF4444" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity={0.95} />
+                ) : null}
+                {returnPath ? (
+                  <Path d={returnPath} fill="none" stroke="#2563EB" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" opacity={0.92} />
+                ) : null}
+              </G>
+            );
+          })}
         </G>
       </G>
 

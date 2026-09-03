@@ -22,6 +22,7 @@ import {
   ExternalLink,
   X,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../components/common/Header';
 import { ModeSwitch } from '../components/common/ModeSwitch';
 import { RoomCanvas2D } from '../components/canvas/RoomCanvas2D';
@@ -35,6 +36,7 @@ import { useProjectStore } from '../store/projectStore';
 import { ROOM_PRESETS } from '../utils/geometry';
 import { analyzeRoomHeatingPattern } from '../utils/hvacAdvisor';
 import { calculateMasterPlumberPlan } from '../utils/masterPlumberEngine';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -98,7 +100,6 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [loading, setLoading] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
 
-  // 10/10 Sifat Standarti: Professional Santexnik va Bino Fizikasi Algoritmi
   const masterPlanRef = useRef<any>(null);
   const masterPlan = useMemo(() => {
     if (!isFocused && masterPlanRef.current) return masterPlanRef.current;
@@ -134,7 +135,6 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
     walls,
   ]);
 
-  // Qishki rejimda Tyopliy pol sxemasi tahlili va tavsiyasi
   const heatingAnalysisRef = useRef<any>(null);
   const heatingAnalysis = useMemo(() => {
     if (!isFocused && heatingAnalysisRef.current) return heatingAnalysisRef.current;
@@ -154,9 +154,10 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
     return (heatingAnalysis?.options || []).find((o: any) => o.id === heatingPattern) || heatingAnalysis.options[0];
   }, [heatingAnalysis, heatingPattern]);
 
-  // Yozgi rejimda xona maydoni va quyosh yuklamasiga qarab konditsioner tavsiyasi
   const recommendedAcInfo = useMemo(() => {
-    const area = roomArea || 24;
+    const area = roomArea || 0;
+    if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.' };
+    
     let btu = 9000;
     let modelName = '09 model (9 000 BTU / 2.6 kW)';
     let count = 1;
@@ -214,7 +215,6 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
     }
   }, [currentRoom]);
 
-  // CADStudiodan qaytganda chizmani markazga avto-moslashtirish
   useFocusEffect(
     useCallback(() => {
       autoCenterRoom(360, 300);
@@ -258,12 +258,12 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
         title={currentProject?.title || 'Mikroiqlim Loyihasi'}
-        subtitle={`${roomName || 'Mehmonxona'} • Maydon: ${roomArea || 24} m² • Fasad: ${currentProject?.compassNorthAngle || 0}°`}
+        subtitle={`${roomName || 'Kvartira'} • ${roomArea || 0} m² • ${currentProject?.compassNorthAngle || 0}°`}
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
-          <TouchableOpacity style={styles.headerBtn} onPress={handleOpenStudio}>
-            <PenTool size={16} color="#38BDF8" />
+          <TouchableOpacity style={styles.headerBtn} onPress={handleOpenStudio} activeOpacity={0.7}>
+            <PenTool size={16} color={COLORS.primary} />
             <Text style={styles.headerBtnText}>Chizish</Text>
           </TouchableOpacity>
         }
@@ -273,35 +273,32 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
+        scrollEnabled={scrollEnabled && dimensionMode === '2D'}
       >
-        {/* Rejim (Qish / Yoz) Switcheri */}
         <View style={styles.section}>
           <ModeSwitch mode={seasonMode} onChange={setSeasonMode} />
         </View>
 
-        {/* 2D / 3D Switcher va Fazo Boshqaruvi */}
         <View style={styles.viewHeader}>
           <View style={styles.vhLeft}>
             <Text style={styles.sectionTitle}>
-              {dimensionMode === '2D' ? '📐 2D Arxitektura & Quvurlar' : '🏢 3D Fazo & Shamol / Quyosh Simulyatsiyasi'}
+              {dimensionMode === '2D' ? '📐 Arxitektura & Quvurlar' : '🏢 3D Fazo Simulyatsiyasi'}
             </Text>
             <Text style={styles.sectionSub}>
               {dimensionMode === '2D'
                 ? seasonMode === 'winter'
                   ? 'Isitish quvurlari va kollektor joylashuvi'
                   : 'Konditsioner aerodinamik sovuq havo oqimi'
-                : '3D bino shakli, quyosh nuri va shamol oqimi'}
+                : '3D bino shakli va quyosh nuri'}
             </Text>
           </View>
 
-          {/* 2D / 3D & Razmerlar Switcher */}
           <View style={styles.dimSwitcher}>
             <TouchableOpacity
               style={[styles.dimBtn, dimensionMode === '2D' && styles.dimBtnActive]}
               onPress={() => setDimensionMode('2D')}
             >
-              <Layers size={14} color={dimensionMode === '2D' ? '#FFFFFF' : '#64748B'} />
+              <Layers size={14} color={dimensionMode === '2D' ? COLORS.primary : COLORS.textSecondary} />
               <Text style={[styles.dimBtnText, dimensionMode === '2D' && styles.dimBtnTextActive]}>2D</Text>
             </TouchableOpacity>
 
@@ -309,7 +306,7 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               style={[styles.dimBtn, dimensionMode === '3D' && styles.dimBtnActive]}
               onPress={() => setDimensionMode('3D')}
             >
-              <Box size={14} color={dimensionMode === '3D' ? '#FFFFFF' : '#64748B'} />
+              <Box size={14} color={dimensionMode === '3D' ? COLORS.primary : COLORS.textSecondary} />
               <Text style={[styles.dimBtnText, dimensionMode === '3D' && styles.dimBtnTextActive]}>3D Fazo</Text>
             </TouchableOpacity>
 
@@ -318,7 +315,7 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 style={[styles.dimBtn, !showDimensions && styles.dimBtnActive]}
                 onPress={toggleShowDimensions}
               >
-                {showDimensions ? <Eye size={13} color="#64748B" /> : <EyeOff size={13} color="#FFFFFF" />}
+                {showDimensions ? <Eye size={14} color={COLORS.textSecondary} /> : <EyeOff size={14} color={COLORS.danger} />}
                 <Text style={[styles.dimBtnText, !showDimensions && styles.dimBtnTextActive]}>
                   {showDimensions ? 'Razmer' : 'Yashirish'}
                 </Text>
@@ -327,22 +324,22 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
           </View>
         </View>
 
-        {/* Prostranstvoga Kirish Tugmasi */}
-        <TouchableOpacity style={styles.enterStudioBtn} onPress={handleOpenStudio} activeOpacity={0.85}>
-          <View style={styles.esbLeft}>
-            <View style={styles.esbIconCircle}>
-              <PenTool size={18} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={styles.esbTitle}>✏️ Prostranstvoda Erkin Chizish & Tahrirlash</Text>
-              <Text style={styles.esbSub}>
-                Alohida to‘liq sahifada devorlarni chizing, mebel va oynalarni erkin joylashtiring
-              </Text>
+        <TouchableOpacity style={styles.enterStudioBtnWrapper} onPress={handleOpenStudio} activeOpacity={0.85}>
+          <View style={styles.enterStudioBtn}>
+            <View style={styles.esbLeft}>
+              <View style={styles.esbIconCircle}>
+                <PenTool size={18} color={COLORS.primary} />
+              </View>
+              <View>
+                <Text style={styles.esbTitle}>Prostranstvoda Erkin Chizish</Text>
+                <Text style={styles.esbSub}>
+                  Devorlarni chizing va elementlarni joylashtiring
+                </Text>
+              </View>
             </View>
           </View>
         </TouchableOpacity>
 
-        {/* 2D yoki 3D Ko'rinish (Canvasga tegib turganda tashqi scroll to'xtatiladi) */}
         <View style={styles.canvasWrapper}>
           {isFocused && (
             dimensionMode === '2D' ? (
@@ -360,237 +357,154 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
           )}
         </View>
 
-        {/* YOZGI REJIM: SOVUTISH VA KONDITSIONER TAVSIYALARI */}
         {seasonMode === 'summer' && (
-          <View style={styles.acAdvisorCard}>
-            <View style={styles.acAdvHeader}>
-              <View style={styles.acAdvHeaderIcon}>
-                <Snowflake size={18} color="#0284C7" />
+          <View style={[styles.acAdvisorCard, { borderColor: COLORS.coolLight }]}>
+            <View style={[styles.acAdvHeader, { borderBottomColor: COLORS.coolLight }]}>
+              <View style={[styles.acAdvHeaderIcon, { backgroundColor: COLORS.coolLight }]}>
+                <Snowflake size={18} color={COLORS.cool} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.acAdvTitle}>❄️ Yozgi Sovutish & Konditsioner Tavsiyasi</Text>
-                <Text style={styles.acAdvSub}>Xona hajmi ({roomArea || 24} m²) va quyosh nuri tushishi bo‘yicha</Text>
+                <Text style={[styles.acAdvTitle, { color: COLORS.coolDark }]}>❄️ Yozgi Sovutish Tavsiyasi</Text>
+                <Text style={styles.acAdvSub}>Xona hajmi ({roomArea || 0} m²) bo‘yicha</Text>
               </View>
             </View>
 
-            {/* Tavsiya etilgan model va quvvat */}
-            <View style={styles.acModelBox}>
+            <View style={[styles.acModelBox, { backgroundColor: COLORS.coolLight, borderColor: COLORS.cool }]}>
               <View style={styles.acModelRow}>
-                <Text style={styles.acModelLabel}>Tavsiya etilgan quvvat:</Text>
-                <Text style={styles.acModelValue}>{recommendedAcInfo.modelName}</Text>
+                <Text style={[styles.acModelLabel, { color: COLORS.coolDark, marginBottom: 4 }]}>Tavsiya etilgan quvvat:</Text>
+                <Text style={[styles.acModelValue, { color: COLORS.cool, flexWrap: 'wrap' }]}>{recommendedAcInfo.modelName}</Text>
               </View>
               <Text style={styles.acModelDesc}>{recommendedAcInfo.desc}</Text>
             </View>
 
-            {/* Qayerga qo'yish kerakligi bo'yicha qoidalar */}
             <View style={styles.acRulesGrid}>
               <View style={styles.acRuleItem}>
-                <MapPin size={14} color="#0284C7" />
+                <MapPin size={14} color={COLORS.cool} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Joylashuvi:</Text> Deraza yonidagi tashqi devorga (trassa qisqa bo‘lishi uchun)
+                  <Text style={styles.bold}>Joylashuvi:</Text> Deraza yonidagi tashqi devorga
                 </Text>
               </View>
               <View style={styles.acRuleItem}>
-                <ShieldCheck size={14} color="#16A34A" />
+                <ShieldCheck size={14} color={COLORS.success} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Salomatlik:</Text> Divan yoki krovatdan 1.5m uzoqroqda (sovuq havo to‘g‘ridan-to‘g‘ri urmasligi uchun)
+                  <Text style={styles.bold}>Salomatlik:</Text> Divandan 1.5m uzoqroqda
                 </Text>
               </View>
               <View style={styles.acRuleItem}>
-                <Wind size={14} color="#38BDF8" />
+                <Wind size={14} color={COLORS.primaryLight} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Havo oqimi:</Text> Shiftdan 20 sm pastda, xona markaziga 75° burchak ostida aylanma sirkulyatsiya
+                  <Text style={styles.bold}>Havo oqimi:</Text> Shiftdan 20 sm pastda
                 </Text>
               </View>
             </View>
 
-            {/* Avtomatik joylashtirish tugmasi */}
             <TouchableOpacity style={styles.autoPlaceAcBtn} onPress={handleAutoPlaceAc} activeOpacity={0.8}>
-              <Sparkles size={16} color="#FFFFFF" />
+              <Sparkles size={16} color={COLORS.surface} />
               <Text style={styles.autoPlaceAcBtnText}>🎯 Tavsiya etilgan joyga o‘rnatish</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* QISHKI REJIM: 10/10 PROFESSIONAL SANTEXNIK ALGORITMI */}
         {dimensionMode === '2D' && seasonMode === 'winter' && (
-          <View style={styles.patternAdvisorCard}>
-            <View style={styles.patternHeader}>
-              <View style={styles.patternHeaderIcon}>
-                <Flame size={20} color="#EF4444" />
+          <View style={[styles.patternAdvisorCard, { borderColor: COLORS.heatLight }]}>
+            <View style={[styles.patternHeader, { borderBottomColor: COLORS.heatLight }]}>
+              <View style={[styles.patternHeaderIcon, { backgroundColor: COLORS.heatLight }]}>
+                <Flame size={20} color={COLORS.heat} />
               </View>
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <Text style={styles.patternTitle}>♨️ Professional Santexnik Tizimi</Text>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: '#ECFDF5',
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: '#A7F3D0',
-                    }}
-                  >
-                    <ShieldCheck size={12} color="#16A34A" style={{ marginRight: 4 }} />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                  <Text style={[styles.patternTitle, { color: COLORS.primaryDark, flexShrink: 1 }]}>♨️ Professional Santexnik Tizimi</Text>
+                  <View style={[styles.balansBadge, { backgroundColor: COLORS.successBg, borderColor: COLORS.success }]}>
+                    <ShieldCheck size={12} color={COLORS.success} style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.success }}>
                       {masterPlan.hydraulicBalancePercent}% Balans
                     </Text>
                   </View>
                 </View>
                 <Text style={styles.patternSub}>
-                  {roomName || 'Kvartira'} ({masterPlan.totalHeatedAreaM2} m²) • {masterPlan.circuitCount} ta mustaqil chig'anoq konturi
+                  {roomName || 'Kvartira'} ({masterPlan.totalHeatedAreaM2} m²) • {masterPlan.circuitCount} ta kontur
                 </Text>
               </View>
             </View>
 
-            {/* 4 ta Tezkor Muhandislik Ko'rsatkichlari */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 10.5, color: '#64748B', fontWeight: '600' }}>📏 Jami PEX Quvur:</Text>
-                <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#0F172A', marginTop: 2 }}>
-                  {masterPlan.billOfMaterials.pexPipe16mmM} metr (16mm)
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12, marginTop: 12 }}>
+              <View style={styles.engStatBox}>
+                <Text style={styles.engStatLabel}>📏 Jami Quvur:</Text>
+                <Text style={styles.engStatVal}>
+                  {masterPlan.billOfMaterials.pexPipe16mmM} m (16mm)
                 </Text>
               </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 10.5, color: '#64748B', fontWeight: '600' }}>🔀 Konturlar soni:</Text>
-                <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#0284C7', marginTop: 2 }}>
-                  {masterPlan.circuitCount} ta Ulitka (&lt;80m)
+              <View style={styles.engStatBox}>
+                <Text style={styles.engStatLabel}>🔀 Konturlar soni:</Text>
+                <Text style={[styles.engStatVal, { color: COLORS.cool }]}>
+                  {masterPlan.circuitCount} ta Ulitka
                 </Text>
               </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 10.5, color: '#64748B', fontWeight: '600' }}>🎛️ Boshqaruv Shkafi:</Text>
-                <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#16A34A', marginTop: 2 }}>
+              <View style={styles.engStatBox}>
+                <Text style={styles.engStatLabel}>🎛️ Boshqaruv:</Text>
+                <Text style={[styles.engStatVal, { color: COLORS.success }]}>
                   {masterPlan.circuitCount} chiqishli KL
                 </Text>
               </View>
-              <View style={{ flex: 1, minWidth: '45%', backgroundColor: '#F8FAFC', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 10.5, color: '#64748B', fontWeight: '600' }}>🛡️ Istisno & Mebel:</Text>
-                <Text style={{ fontSize: 13, fontWeight: 'bold', color: masterPlan.totalExcludedAreaM2 > 0 ? '#EF4444' : '#10B981', marginTop: 2 }}>
+              <View style={styles.engStatBox}>
+                <Text style={styles.engStatLabel}>🛡️ Istisno & Mebel:</Text>
+                <Text style={[styles.engStatVal, { color: masterPlan.totalExcludedAreaM2 > 0 ? COLORS.danger : COLORS.success }]}>
                   {masterPlan.totalExcludedAreaM2 > 0 ? `${masterPlan.totalExcludedAreaM2} m² chetlandi` : 'Toza reja'}
                 </Text>
               </View>
             </View>
 
-            {/* Muhandislik Xulosasi */}
-            <View style={{ backgroundColor: 'rgba(2, 132, 199, 0.08)', padding: 10, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(2, 132, 199, 0.25)' }}>
+            <View style={styles.engineeringVerdict}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <ShieldCheck size={14} color="#0284C7" />
-                <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: '#0369A1', marginLeft: 4 }}>
+                <ShieldCheck size={14} color={COLORS.primary} />
+                <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: COLORS.primaryDark, marginLeft: 4 }}>
                   Muhandislik va Gidravlik Standart (KMK 2.04.05-97):
                 </Text>
               </View>
-              <Text style={{ fontSize: 11.5, color: '#0F172A', fontWeight: '500', lineHeight: 16 }}>
+              <Text style={{ fontSize: 11.5, color: COLORS.text, fontWeight: '500', lineHeight: 16 }}>
                 {masterPlan.expertVerdict}
               </Text>
             </View>
 
-            {/* Arxitektura va Iqlimiy Elementlar Tahlili */}
-            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, marginBottom: 12 }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0F172A', marginBottom: 6 }}>
+            <View style={styles.analysisBox}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: COLORS.text, marginBottom: 6 }}>
                 🏗️ Bino Fizikasi va Elementlar Tahlili:
               </Text>
-              <View style={{ gap: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>🧱 Devorlar: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.exteriorWallsSummary}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>🪟 Oynalar: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.windowsSummary}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>🧭 Quyosh & Shamol: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.solarWindSummary}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>🚪 Eshiklar: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.doorsSummary}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>🛡️ Istisno & Mebel: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.excludedSummary}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, color: '#334155', fontWeight: '600' }}>📐 Simmetriya & Fizika: </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', flex: 1 }}>{masterPlan.environmentalAnalysis.physicsSummary}</Text>
-                </View>
+              <View style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}><Text style={styles.analysisLabel}>🧱 Devorlar: </Text><Text style={[styles.analysisVal, { flexShrink: 1 }]}>{masterPlan.environmentalAnalysis.exteriorWallsSummary}</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}><Text style={styles.analysisLabel}>🪟 Oynalar: </Text><Text style={[styles.analysisVal, { flexShrink: 1 }]}>{masterPlan.environmentalAnalysis.windowsSummary}</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}><Text style={styles.analysisLabel}>🧭 Quyosh: </Text><Text style={[styles.analysisVal, { flexShrink: 1 }]}>{masterPlan.environmentalAnalysis.solarWindSummary}</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}><Text style={styles.analysisLabel}>🚪 Eshiklar: </Text><Text style={[styles.analysisVal, { flexShrink: 1 }]}>{masterPlan.environmentalAnalysis.doorsSummary}</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}><Text style={styles.analysisLabel}>📐 Fizika: </Text><Text style={[styles.analysisVal, { flexShrink: 1 }]}>{masterPlan.environmentalAnalysis.physicsSummary}</Text></View>
               </View>
             </View>
 
-            {/* Har bir Kontur Gidravlikasi */}
-            <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0F172A', marginBottom: 6 }}>
-                📋 Mustaqil Konturlar Gidravlikasi:
-              </Text>
-              {(masterPlan?.circuits || []).map((c: any, idx: number) => (
-                <View
-                  key={c.id}
-                  style={{
-                    backgroundColor: '#FFFFFF',
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
-                    borderRadius: 8,
-                    padding: 8,
-                    marginBottom: 6,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <Text style={{ fontSize: 11.5, fontWeight: 'bold', color: '#0F172A' }}>
-                      🌀 {idx + 1}-Kontur: {c.name}
-                    </Text>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#EF4444' }}>
-                      {c.pipeLengthM} metr
-                    </Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                      Qadam: {c.stepSm} sm {c.isBorderZone ? '(Chekka zona)' : ''}
-                    </Text>
-                    <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                      Oqim: {c.flowRateL_min} L/min • ΔP: {c.pressureLossKPa} kPa
-                    </Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {/* Quvur ranglari izohi */}
             <View style={styles.legendGrid}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#EF4444' }]} />
-                <Text style={styles.legendText}>
-                  <Text style={{ fontWeight: '800', color: '#EF4444' }}>Qizil:</Text> Kirish (+45°C)
-                </Text>
+                <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
+                <Text style={styles.legendText}><Text style={{ fontWeight: '800', color: COLORS.danger }}>Qizil:</Text> Kirish (+45°C)</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#2563EB' }]} />
-                <Text style={styles.legendText}>
-                  <Text style={{ fontWeight: '800', color: '#2563EB' }}>Ko‘k:</Text> Qaytish (+35°C)
-                </Text>
+                <View style={[styles.legendDot, { backgroundColor: COLORS.cool }]} />
+                <Text style={styles.legendText}><Text style={{ fontWeight: '800', color: COLORS.cool }}>Ko‘k:</Text> Qaytish (+35°C)</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FB923C' }]} />
-                <Text style={styles.legendText}>
-                  <Text style={{ fontWeight: '800', color: '#C2410C' }}>KL:</Text> Kollektor
-                </Text>
+                <View style={[styles.legendDot, { backgroundColor: COLORS.warning }]} />
+                <Text style={styles.legendText}><Text style={{ fontWeight: '800', color: COLORS.warningDark || '#C2410C' }}>KL:</Text> Kollektor</Text>
               </View>
             </View>
           </View>
         )}
 
-        {/* Xona Parametrlari Xulosasi */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.sumItem}>
               <Text style={styles.sumLabel}>Maydon (S):</Text>
-              <Text style={styles.sumVal}>{roomArea || 24} m²</Text>
+              <Text style={styles.sumVal}>{roomArea || 0} m²</Text>
             </View>
             <View style={styles.sumItem}>
               <Text style={styles.sumLabel}>Perimetr (P):</Text>
-              <Text style={styles.sumVal}>{roomPerimeter || 20} m</Text>
+              <Text style={styles.sumVal}>{roomPerimeter || 0} m</Text>
             </View>
             <View style={styles.sumItem}>
               <Text style={styles.sumLabel}>Balandlik (H):</Text>
@@ -603,40 +517,33 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
           </View>
         </View>
 
-        {/* Intellektual Muhandislik & Xavfsizlik Tavsiyalari */}
         <EngineeringAdvisorCard />
 
-        {/* Mikroiqlim Standartlari Badgelari */}
         <View style={styles.standardsRow}>
           <View style={styles.stdBadge}>
-            <ShieldCheck size={14} color="#16A34A" />
+            <ShieldCheck size={14} color={COLORS.success} />
             <Text style={styles.stdText}>KMK 2.04.05-97</Text>
           </View>
           <View style={styles.stdBadge}>
-            {seasonMode === 'winter' ? <Flame size={14} color="#EF4444" /> : <Snowflake size={14} color="#0284C7" />}
+            {seasonMode === 'winter' ? <Flame size={14} color={COLORS.heat} /> : <Snowflake size={14} color={COLORS.cool} />}
             <Text style={styles.stdText}>
               {seasonMode === 'winter' ? 'Tyoply Pol (W/m²)' : 'BTU Inverter (HVAC)'}
             </Text>
           </View>
-          <View style={styles.stdBadge}>
-            <Compass size={14} color="#F59E0B" />
-            <Text style={styles.stdText}>Fasad: {currentProject?.compassNorthAngle || 0}° Shimol</Text>
-          </View>
         </View>
       </ScrollView>
 
-      {/* Pastki Harakat Tugmasi */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom || 16 }]}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom || SPACING.lg }]}>
         <CustomButton
-          title="⚡ To‘liq Hisob-kitob va Smetani Chiqarish"
+          title="⚡ Loyiha & Smetani Chiqarish"
           onPress={handleGenerate}
           loading={loading}
           variant="primary"
-          icon={<Sparkles size={18} color="#FFFFFF" />}
+          icon={<Sparkles size={18} color={COLORS.surface} />}
         />
       </View>
 
-      <LoadingModal visible={loading} message="Mikroiqlim va smeta hisoblanmoqda..." />
+      <LoadingModal visible={loading} message="Hisoblanmoqda..." />
       <Modal visible={is3DFullscreen} animationType="slide" presentationStyle="fullScreen">
         <RoomCanvas3D
           wallHeightM={currentProject?.defaultCeilingHeight || 3.0}
@@ -651,134 +558,309 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
   },
   headerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: COLORS.primaryBg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
     gap: 4,
   },
   headerBtnText: {
-    color: '#38BDF8',
+    color: COLORS.primary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: SPACING.lg,
     paddingBottom: 32,
   },
   section: {
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   viewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   vhLeft: {
     flex: 1,
   },
   sectionTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
   },
   sectionSub: {
     fontSize: 11,
-    color: '#64748B',
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   dimSwitcher: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 10,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.pill,
     padding: 3,
     gap: 2,
   },
   dimBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 7,
-    gap: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: RADIUS.pill,
+    gap: 4,
   },
   dimBtnActive: {
-    backgroundColor: '#0284C7',
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.card,
   },
   dimBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   dimBtnTextActive: {
-    color: '#FFFFFF',
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  enterStudioBtnWrapper: {
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    ...SHADOWS.card,
   },
   enterStudioBtn: {
-    backgroundColor: '#0284C7',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: SPACING.md,
   },
   esbLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   esbIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   esbTitle: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: COLORS.text,
   },
   esbSub: {
-    fontSize: 10.5,
-    color: '#E0F2FE',
-    marginTop: 2,
-    maxWidth: '90%',
+    fontSize: 11.5,
+    color: COLORS.textSecondary,
+    marginTop: 3,
+    maxWidth: '95%',
   },
-  pipeLegendCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 10,
+  canvasWrapper: {
+    width: '100%',
+    height: 340,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    marginVertical: 4,
   },
-  legendHeader: {
+  acAdvisorCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    ...SHADOWS.card,
+  },
+  acAdvHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginBottom: 6,
+    gap: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
   },
-  legendHeaderTitle: {
-    fontSize: 11.5,
+  acAdvHeaderIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acAdvTitle: {
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+  },
+  acAdvSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 1,
+  },
+  acModelBox: {
+    borderRadius: RADIUS.md,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  acModelRow: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  acModelLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  acModelValue: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  acModelDesc: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  acRulesGrid: {
+    marginTop: 12,
+    gap: 8,
+  },
+  acRuleItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: COLORS.surfaceAlt,
+    padding: 10,
+    borderRadius: RADIUS.sm,
+  },
+  acRuleText: {
+    flex: 1,
+    fontSize: 11,
+    color: COLORS.text,
+    lineHeight: 16,
+  },
+  bold: {
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  autoPlaceAcBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: 12,
+    marginTop: 14,
+    gap: 8,
+  },
+  autoPlaceAcBtnText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: COLORS.surface,
+  },
+  patternAdvisorCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    ...SHADOWS.card,
+  },
+  patternHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  patternHeaderIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  patternTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  balansBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+  },
+  patternSub: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  engStatBox: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: COLORS.surfaceAlt,
+    padding: 10,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  engStatLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  engStatVal: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 4,
+  },
+  engineeringVerdict: {
+    backgroundColor: COLORS.primaryBg,
+    padding: 12,
+    borderRadius: RADIUS.md,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+  },
+  analysisBox: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: 12,
+    marginBottom: 12,
+  },
+  analysisLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    width: 80,
+  },
+  analysisVal: {
+    fontSize: 11,
+    color: COLORS.text,
+    flex: 1,
+    fontWeight: '500',
+    lineHeight: 16,
   },
   legendGrid: {
-    flexDirection: 'column',
-    gap: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   legendItem: {
     flexDirection: 'row',
@@ -786,21 +868,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   legendDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   legendText: {
-    fontSize: 11,
-    color: '#475569',
+    fontSize: 11.5,
+    color: COLORS.textSecondary,
   },
   summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    marginTop: 10,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -810,330 +892,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sumLabel: {
-    fontSize: 10,
-    color: '#64748B',
+    fontSize: 10.5,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   sumVal: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 2,
+    color: COLORS.text,
+    marginTop: 4,
   },
   standardsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 12,
+    gap: 8,
+    marginTop: SPACING.md,
   },
   stdBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 4,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
   },
   stdText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  canvasWrapper: {
-    width: '100%',
-    height: 320,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    marginVertical: 4,
-  },
-  acAdvisorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    shadowColor: '#0284C7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  acAdvHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F9FF',
-  },
-  acAdvHeaderIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#E0F2FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  acAdvTitle: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: '#0369A1',
-  },
-  acAdvSub: {
-    fontSize: 10.5,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  acModelBox: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  acModelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  acModelLabel: {
     fontSize: 11,
-    color: '#0369A1',
-    fontWeight: '600',
-  },
-  acModelValue: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#0284C7',
-  },
-  acModelDesc: {
-    fontSize: 10.5,
-    color: '#475569',
-    marginTop: 4,
-  },
-  acRulesGrid: {
-    marginTop: 10,
-    gap: 6,
-  },
-  acRuleItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    backgroundColor: '#F8FAFC',
-    padding: 8,
-    borderRadius: 8,
-  },
-  acRuleText: {
-    flex: 1,
-    fontSize: 10.5,
-    color: '#334155',
-    lineHeight: 15,
-  },
-  bold: {
     fontWeight: '700',
-    color: '#0F172A',
-  },
-  autoPlaceAcBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0284C7',
-    borderRadius: 12,
-    paddingVertical: 10,
-    marginTop: 12,
-    gap: 6,
-  },
-  autoPlaceAcBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  patternAdvisorCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  patternHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FEF2F2',
-  },
-  patternHeaderIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FEE2E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  patternTitle: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    color: '#991B1B',
-  },
-  patternSub: {
-    fontSize: 10.5,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  patternGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
-  },
-  patternBtn: {
-    width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 10,
-  },
-  patternBtnActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#0284C7',
-  },
-  patternBtnTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  patternEmoji: {
-    fontSize: 18,
-  },
-  recBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  recBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#16A34A',
-  },
-  patternName: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  patternNameActive: {
-    color: '#0284C7',
-    fontWeight: '800',
-  },
-  patternStepText: {
-    fontSize: 9.5,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  patternDetailBox: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-  },
-  patternDetailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  patternDetailTitle: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#0369A1',
-  },
-  recPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 10,
-    gap: 4,
-  },
-  recPillText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#16A34A',
-  },
-  patternDetailReason: {
-    fontSize: 11,
-    color: '#334155',
-    lineHeight: 16,
-    marginBottom: 10,
-  },
-  specRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E0F2FE',
-  },
-  specItem: {
-    alignItems: 'center',
-  },
-  specLabel: {
-    fontSize: 9.5,
-    color: '#64748B',
-  },
-  specValue: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#0369A1',
-    marginTop: 1,
-  },
-  specDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: '#E2E8F0',
-  },
-  advantagesList: {
-    gap: 4,
-  },
-  advItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  advText: {
-    fontSize: 10,
-    color: '#475569',
-    flex: 1,
+    color: COLORS.text,
   },
   bottomBar: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: COLORS.border,
   },
 });

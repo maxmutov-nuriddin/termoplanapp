@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapPin, Sun, Wind, Compass, ArrowRight, Navigation, Check, CheckCircle2, ShieldCheck, RefreshCw, Zap } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../components/common/Header';
 import { InteractiveMapPicker } from '../components/common/InteractiveMapPicker';
 import { CustomButton } from '../components/common/CustomButton';
 import { useProjectStore } from '../store/projectStore';
 import { UZBEKISTAN_REGIONS } from '../api/client';
 import { ClimateRegion } from '../types';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -30,7 +32,6 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
 
   const selectedRegion = UZBEKISTAN_REGIONS.find((r) => r.id === selectedRegionId) || UZBEKISTAN_REGIONS[0];
 
-  // Avtomatik GPS Joylashuvni aniqlash
   const handleDetectLocation = async (showAlert = false) => {
     setLocating(true);
     try {
@@ -74,10 +75,8 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
           detectedDistrict = geoRes[0].district || geoRes[0].subregion || '';
         }
       } catch {
-        // safe fallback
       }
 
-      // Eng yaqin viloyatni topish
       let closestRegion = UZBEKISTAN_REGIONS[0];
       let minDistance = Infinity;
       for (const reg of UZBEKISTAN_REGIONS) {
@@ -108,7 +107,6 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
     }
   };
 
-  // Ekranga kirganda avtomatik GPS ni ishga tushirish
   useEffect(() => {
     handleDetectLocation(false);
   }, []);
@@ -157,10 +155,13 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
       />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* 1. Avtomatik GPS Joylashuv Kartochkasi */}
+        {/* Avtomatik GPS Joylashuv Kartochkasi */}
         <View style={styles.autoLocationCard}>
           <View style={styles.alcLeft}>
-            <View style={styles.pulseDot} />
+            <View style={styles.pulseDotWrapper}>
+              <View style={styles.pulseDotOuter} />
+              <View style={styles.pulseDot} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.alcTitle}>
                 {gpsData?.city || selectedRegion.nameUz}
@@ -180,35 +181,42 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
             activeOpacity={0.7}
           >
             {locating ? (
-              <ActivityIndicator color="#0284C7" size="small" />
+              <ActivityIndicator color={COLORS.primary} size="small" />
             ) : (
-              <RefreshCw color="#0284C7" size={16} />
+              <RefreshCw color={COLORS.primary} size={16} />
             )}
           </TouchableOpacity>
         </View>
 
-        {/* 2. Jonli Leaflet HD Xarita & Real Quyosh/Soya Simulyatsiyasi */}
+        {/* Jonli Leaflet HD Xarita */}
         <InteractiveMapPicker
           selectedRegion={effectiveRegion}
           compassAngle={compassAngle}
           onSelectCoordinates={handleCoordinatesSelectedOnMap}
         />
 
-        {/* 3. Avtomatik Iqlim va Havfsizlik Xulosasi */}
+        {/* Avtomatik Iqlim va Havfsizlik Xulosasi */}
         <View style={styles.climateSummaryCard}>
           <View style={styles.cscHeader}>
-            <ShieldCheck size={18} color="#16A34A" />
-            <Text style={styles.cscTitle}>KMK 2.04.05-97 Avtomatik Iqlim Ko‘rsatkichlari</Text>
+            <LinearGradient
+              colors={[COLORS.success, COLORS.primaryLight]}
+              style={styles.cscHeaderIcon}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <ShieldCheck size={16} color={COLORS.surface} />
+            </LinearGradient>
+            <Text style={styles.cscTitle}>QMQ 2.04.05-97 Avtomatik Iqlim</Text>
           </View>
 
           <View style={styles.cscGrid}>
             <View style={styles.cscItem}>
               <Text style={styles.cscLabel}>Qishki Min Harorat:</Text>
-              <Text style={[styles.cscVal, { color: '#0284C7' }]}>{selectedRegion.minWinterTemp}°C</Text>
+              <Text style={[styles.cscVal, { color: COLORS.cool }]}>{selectedRegion.minWinterTemp}°C</Text>
             </View>
             <View style={styles.cscItem}>
               <Text style={styles.cscLabel}>Yozgi Max Harorat:</Text>
-              <Text style={[styles.cscVal, { color: '#EF4444' }]}>+{selectedRegion.maxSummerTemp}°C</Text>
+              <Text style={[styles.cscVal, { color: COLORS.heat }]}>+{selectedRegion.maxSummerTemp}°C</Text>
             </View>
             <View style={styles.cscItem}>
               <Text style={styles.cscLabel}>Mavsumiy Shamol:</Text>
@@ -221,8 +229,8 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
           </View>
         </View>
 
-        {/* 4. Tezkor Viloyatni O‘zgartirish (Zarurat bo‘lsa) */}
-        <Text style={styles.sectionTitle}>Boshqa Hududni Tanlash (Zarurat bo‘lsa):</Text>
+        {/* Tezkor Viloyatni O‘zgartirish */}
+        <Text style={styles.sectionTitle}>Boshqa Hududni Tanlash:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.regionsScroll}>
           {UZBEKISTAN_REGIONS.map((r) => {
             const isSelected = selectedRegionId === r.id;
@@ -246,10 +254,10 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
       </ScrollView>
 
       {/* Pastki Harakat Tugmasi */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom || 16 }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom || SPACING.lg }]}>
         <CustomButton
-          title="⚡ 2D & 3D Loyihalashga O‘tish"
-          icon={<ArrowRight color="#FFFFFF" size={18} />}
+          title="⚡ Loyihalashga O‘tish"
+          icon={<ArrowRight color={COLORS.surface} size={18} />}
           onPress={handleSaveAndContinue}
         />
       </View>
@@ -260,153 +268,168 @@ export const LocationScreen: React.FC<{ navigation: any; route: any }> = ({ navi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 30,
+    padding: SPACING.lg,
+    paddingBottom: 40,
   },
   autoLocationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
     padding: 14,
-    marginBottom: 14,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
   },
   alcLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     flex: 1,
   },
+  pulseDotWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 14,
+    height: 14,
+  },
+  pulseDotOuter: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: COLORS.success,
+    opacity: 0.3,
+  },
   pulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#16A34A',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.success,
   },
   alcTitle: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
   },
   alcSub: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 11.5,
+    color: COLORS.textSecondary,
     marginTop: 2,
+    fontWeight: '500',
   },
   refreshGpsBtn: {
-    backgroundColor: '#F0F9FF',
-    padding: 8,
-    borderRadius: 10,
+    backgroundColor: COLORS.primaryBg,
+    padding: 10,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#BAE6FD',
+    borderColor: COLORS.primaryLight,
   },
   climateSummaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
   },
   cscHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingBottom: 10,
+    gap: 10,
+    paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: COLORS.borderLight,
+  },
+  cscHeaderIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cscTitle: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
   },
   cscGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 10,
-    gap: 8,
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
   },
   cscItem: {
     width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 8,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
   },
   cscLabel: {
-    fontSize: 10,
-    color: '#64748B',
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   cscVal: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 2,
+    color: COLORS.text,
+    marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#334155',
-    marginTop: 6,
-    marginBottom: 8,
+    color: COLORS.text,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   regionsScroll: {
-    gap: 8,
-    paddingBottom: 6,
+    gap: SPACING.sm,
+    paddingBottom: SPACING.sm,
   },
   regionChip: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
     alignItems: 'center',
-    minWidth: 90,
+    minWidth: 100,
   },
   selectedRegionChip: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primaryDark,
   },
   regionChipText: {
-    fontSize: 11.5,
+    fontSize: 12.5,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
   },
   selectedRegionChipText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
   regionTemp: {
-    fontSize: 10,
-    color: '#64748B',
-    marginTop: 1,
+    fontSize: 10.5,
+    color: COLORS.textSecondary,
+    marginTop: 2,
     fontWeight: '600',
   },
   selectedRegionTemp: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: COLORS.primaryBg,
   },
   footer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    padding: SPACING.lg,
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: COLORS.border,
   },
 });

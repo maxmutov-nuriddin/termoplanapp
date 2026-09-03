@@ -1,98 +1,105 @@
-import { useShallow } from 'zustand/react/shallow';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { PenTool, MousePointer, RefreshCw } from 'lucide-react-native';
-import { CanvasTool, useCanvasStore } from '../../store/canvasStore';
+import { MousePointer2, Thermometer, Wind } from 'lucide-react-native';
+import { useCanvasStore } from '../../store/canvasStore';
+import { useShallow } from 'zustand/react/shallow';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 export const CanvasToolbar: React.FC = () => {
-  const { selectedTool, setSelectedTool, clearCanvas } = useCanvasStore(useShallow(s => ({
-      selectedTool: s.selectedTool,
-      setSelectedTool: s.setSelectedTool,
-      clearCanvas: s.clearCanvas,
-    })));
-
-  const tools: Array<{ id: CanvasTool; label: string; icon: React.ReactNode }> = [
-    { id: 'select', label: 'Tanlash / Surish', icon: <MousePointer size={16} color={selectedTool === 'select' ? '#0284C7' : '#475569'} /> },
-    { id: 'pen_wall', label: '🧱 Tashqi Devor', icon: <PenTool size={16} color={selectedTool === 'pen_wall' ? '#0284C7' : '#475569'} /> },
-    { id: 'pen_room', label: '🚪 Ichki Devor (Xona)', icon: <PenTool size={16} color={selectedTool === 'pen_room' ? '#0284C7' : '#475569'} /> },
-  ];
+  const { toolMode, setToolMode, seasonMode } = useCanvasStore(
+    useShallow((s) => ({
+      toolMode: s.toolMode,
+      setToolMode: s.setToolMode,
+      seasonMode: s.seasonMode,
+    }))
+  );
 
   return (
-    <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {tools.map((t) => {
-          const isActive = selectedTool === t.id;
-          return (
-            <TouchableOpacity
-              key={t.id}
-              style={[styles.toolBtn, isActive && styles.activeToolBtn]}
-              onPress={() => setSelectedTool(t.id)}
-              activeOpacity={0.7}
-            >
-              {t.icon}
-              <Text style={[styles.toolLabel, isActive && styles.activeToolLabel]}>{t.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-
-        <TouchableOpacity style={styles.clearBtn} onPress={clearCanvas} activeOpacity={0.7}>
-          <RefreshCw size={14} color="#EF4444" />
-          <Text style={styles.clearLabel}>Tozalash</Text>
+    <View style={styles.toolbarWrapper}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContainer}>
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'select' && styles.toolBtnActive]}
+          onPress={() => setToolMode('select')}
+        >
+          <MousePointer2 size={16} color={toolMode === 'select' ? COLORS.primary : COLORS.textSecondary} />
+          <Text style={[styles.toolText, toolMode === 'select' && styles.toolTextActive]}>Surish</Text>
         </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        {seasonMode === 'winter' ? (
+          <>
+            <TouchableOpacity
+              style={[styles.toolBtn, toolMode === 'place_manifold' && styles.toolBtnActive]}
+              onPress={() => setToolMode('place_manifold')}
+            >
+              <Thermometer size={16} color={toolMode === 'place_manifold' ? COLORS.heat : COLORS.textSecondary} />
+              <Text style={[styles.toolText, toolMode === 'place_manifold' && { color: COLORS.heat, fontWeight: '800' }]}>Kollektor</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.toolBtn, toolMode === 'place_boiler' && styles.toolBtnActive]}
+              onPress={() => setToolMode('place_boiler')}
+            >
+              <Flame size={16} color={toolMode === 'place_boiler' ? COLORS.heat : COLORS.textSecondary} />
+              <Text style={[styles.toolText, toolMode === 'place_boiler' && { color: COLORS.heat, fontWeight: '800' }]}>Kotyol</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={[styles.toolBtn, toolMode === 'place_ac' && styles.toolBtnActive]}
+            onPress={() => setToolMode('place_ac')}
+          >
+            <Wind size={16} color={toolMode === 'place_ac' ? COLORS.cool : COLORS.textSecondary} />
+            <Text style={[styles.toolText, toolMode === 'place_ac' && { color: COLORS.cool, fontWeight: '800' }]}>Konditsioner</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+  toolbarWrapper: {
+    backgroundColor: COLORS.surface,
     paddingVertical: 6,
+    paddingHorizontal: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  scroll: {
-    paddingHorizontal: 12,
-    gap: 8,
+  toolbarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   toolBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    backgroundColor: COLORS.surfaceAlt,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
     gap: 6,
   },
-  activeToolBtn: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#0284C7',
+  toolBtnActive: {
+    backgroundColor: COLORS.primaryBg,
+    borderColor: COLORS.primaryLight,
   },
-  toolLabel: {
+  toolText: {
     fontSize: 11.5,
+    color: COLORS.textSecondary,
     fontWeight: '600',
-    color: '#334155',
   },
-  activeToolLabel: {
-    color: '#0284C7',
-    fontWeight: '700',
+  toolTextActive: {
+    color: COLORS.primary,
+    fontWeight: '800',
   },
-  clearBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 4,
-  },
-  clearLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#EF4444',
+  divider: {
+    width: 1,
+    height: 20,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 4,
   },
 });

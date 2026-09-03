@@ -22,6 +22,7 @@ import {
 import { ClimateRegion } from '../../types';
 import { UZBEKISTAN_REGIONS } from '../../api/client';
 import { calculateExactSolarPhysics, SolarCalculationResult } from '../../utils/solarPhysics';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -87,7 +88,7 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #0B1120;
+      background: ${COLORS.dark};
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
@@ -96,14 +97,14 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
     .house-box {
       width: 34px;
       height: 34px;
-      background: #0284C7;
-      border: 2.5px solid #FFFFFF;
+      background: ${COLORS.primary};
+      border: 2.5px solid ${COLORS.surface};
       border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
-      color: #FFFFFF;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      color: ${COLORS.surface};
       font-size: 16px;
     }
     
@@ -216,8 +217,8 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       var ry = cy - Math.cos(rRad) * 85;
 
       ctx.save();
-      ctx.strokeStyle = '#F59E0B';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '${COLORS.warning}';
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -225,8 +226,8 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       ctx.stroke();
 
       ctx.setLineDash([]);
-      ctx.fillStyle = '#FEF3C7';
-      ctx.font = 'bold 9.5px -apple-system, sans-serif';
+      ctx.fillStyle = '${COLORS.warningBg}';
+      ctx.font = 'bold 10px -apple-system, sans-serif';
       ctx.fillText('🌅 Chiqish ' + riseTime + ' (' + Math.round(riseAz) + '°)', rx + 6, ry);
       ctx.restore();
 
@@ -236,8 +237,8 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       var setY = cy - Math.cos(sSetRad) * 85;
 
       ctx.save();
-      ctx.strokeStyle = '#EA580C';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = '${COLORS.heat}';
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -245,22 +246,20 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       ctx.stroke();
 
       ctx.setLineDash([]);
-      ctx.fillStyle = '#FED7AA';
-      ctx.font = 'bold 9.5px -apple-system, sans-serif';
+      ctx.fillStyle = '${COLORS.heatLight}';
+      ctx.font = 'bold 10px -apple-system, sans-serif';
       ctx.fillText('🌆 Botish ' + setTime + ' (' + Math.round(setAz) + '°)', setX - 110, setY);
       ctx.restore();
 
       // 3. HOZIRGI KUNDUZGI QUYOSH VA REAL SOYA
       if (isDay && sunElevation > 0) {
-        // Aniq Soya hisobi: Shimol=0°, Sharq=90°, Janub=180°, G'arb=270°
         var sRad = (shadowAzimuth * Math.PI) / 180;
         var pixLen = Math.min(130, Math.max(16, shadowLen * 3.2));
         var ex = cx + Math.sin(sRad) * pixLen;
         var ey = cy - Math.cos(sRad) * pixLen;
 
-        // Bino soyasi poligoni
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.beginPath();
         ctx.moveTo(cx - 15, cy);
         ctx.lineTo(cx + 15, cy);
@@ -269,8 +268,7 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
         ctx.closePath();
         ctx.fill();
 
-        // Soya o'qi
-        ctx.strokeStyle = '#38BDF8';
+        ctx.strokeStyle = '${COLORS.cool}';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 2]);
         ctx.beginPath();
@@ -279,21 +277,19 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
         ctx.stroke();
 
         ctx.setLineDash([]);
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '${COLORS.surface}';
         ctx.font = 'bold 11px -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('Soya: ' + shadowLen + 'm (' + Math.round(shadowAzimuth) + '°)', ex, ey + 15);
         ctx.restore();
 
-        // Aniq Quyosh Shari va Nur Konusi
         var sunRad = (sunAzimuth * Math.PI) / 180;
         var sx = cx + Math.sin(sunRad) * 95;
         var sy = cy - Math.cos(sunRad) * 95;
 
-        // Nur konusi
         var grad = ctx.createLinearGradient(sx, sy, cx, cy);
-        grad.addColorStop(0, 'rgba(251, 191, 36, 0.6)');
-        grad.addColorStop(1, 'rgba(245, 158, 11, 0.02)');
+        grad.addColorStop(0, 'rgba(217, 119, 6, 0.6)'); // Warning color base
+        grad.addColorStop(1, 'rgba(217, 119, 6, 0.02)');
         ctx.fillStyle = grad;
         ctx.beginPath();
         ctx.moveTo(sx, sy);
@@ -302,16 +298,15 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
         ctx.closePath();
         ctx.fill();
 
-        // Quyosh shari
         ctx.save();
-        ctx.fillStyle = '#F59E0B';
-        ctx.shadowColor = '#FDE047';
+        ctx.fillStyle = '${COLORS.warning}';
+        ctx.shadowColor = '${COLORS.warningBg}';
         ctx.shadowBlur = 18;
         ctx.beginPath();
         ctx.arc(sx, sy, 11, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = '${COLORS.surface}';
         ctx.font = 'bold 10px -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(sunWatts + ' W/m²', sx, sy - 14);
@@ -408,8 +403,8 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       {/* Header & Jonli Holat Badgi */}
       <View style={styles.headerRow}>
         <View style={styles.headerTitleLeft}>
-          <Sun size={18} color="#F59E0B" />
-          <Text style={styles.title}>NOAA Aniq Quyosh & Soya Tahlili</Text>
+          <Sun size={18} color={COLORS.warning} />
+          <Text style={styles.title}>NOAA Quyosh & Soya Tahlili</Text>
         </View>
 
         <TouchableOpacity
@@ -429,7 +424,7 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       </View>
 
       {/* Leaflet HD Xaritasi (Zoom 17) */}
-      <View style={[styles.mapContainer, { width: mapWidth, height: mapHeight }]}>
+      <View style={styles.mapContainer}>
         <WebView
           ref={webViewRef}
           originWhitelist={['*']}
@@ -463,10 +458,10 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
 
         {/* Chiqish va Botish Ko'rsatkichi Badgi */}
         <View style={styles.solarTimingPill}>
-          <Sunrise size={12} color="#F59E0B" />
+          <Sunrise size={12} color={COLORS.warning} />
           <Text style={styles.timingPillText}>{solarData.sunriseTimeStr} ({Math.round(solarData.sunriseAzimuthDeg)}° Sh-Sh)</Text>
-          <Text style={{ color: '#64748B' }}>•</Text>
-          <Sunset size={12} color="#EA580C" />
+          <Text style={{ color: COLORS.textMuted }}>•</Text>
+          <Sunset size={12} color={COLORS.heat} />
           <Text style={styles.timingPillText}>{solarData.sunsetTimeStr} ({Math.round(solarData.sunsetAzimuthDeg)}° Sh-G‘)</Text>
         </View>
       </View>
@@ -497,25 +492,25 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
       {/* Real Natijalar (HUD Paneli) */}
       <View style={styles.hudGrid}>
         <View style={styles.hudCard}>
-          <Sun size={14} color="#F59E0B" />
+          <Sun size={14} color={COLORS.warning} />
           <Text style={styles.hudLabel}>Quyosh Quvvati</Text>
           <Text style={styles.hudValue}>{solarData.solarRadiationWatts} W/m²</Text>
         </View>
 
         <View style={styles.hudCard}>
-          <Compass size={14} color="#0284C7" />
+          <Compass size={14} color={COLORS.cool} />
           <Text style={styles.hudLabel}>Azimut / Balandlik</Text>
           <Text style={styles.hudValue}>{Math.round(solarData.sunAzimuthDeg)}° / {solarData.sunElevationDeg}°</Text>
         </View>
 
         <View style={styles.hudCard}>
-          <Eye size={14} color="#8B5CF6" />
+          <Eye size={14} color={COLORS.primary} />
           <Text style={styles.hudLabel}>Bino Soyasi</Text>
           <Text style={styles.hudValue}>{solarData.shadowLengthM} metr</Text>
         </View>
 
         <View style={styles.hudCard}>
-          <Wind size={14} color="#06B6D4" />
+          <Wind size={14} color={COLORS.coolLight} />
           <Text style={styles.hudLabel}>Shamol Zarbasi</Text>
           <Text style={styles.hudValue}>{selectedRegion.windSpeedWinter || 3.2} m/s</Text>
         </View>
@@ -526,194 +521,182 @@ export const InteractiveMapPicker: React.FC<InteractiveMapPickerProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     marginHorizontal: 0,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.card,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: SPACING.sm,
   },
   headerTitleLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flex: 1,
+    flexShrink: 1,
   },
   title: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
+    flexShrink: 1,
   },
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     gap: 5,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginLeft: 6,
   },
   livePillActive: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FCA5A5',
+    backgroundColor: COLORS.dangerBg,
   },
   liveDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: '#64748B',
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.textMuted,
   },
   liveDotActive: {
-    backgroundColor: '#EF4444',
+    backgroundColor: COLORS.danger,
   },
   liveText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#64748B',
+    color: COLORS.textSecondary,
   },
   liveTextActive: {
-    color: '#DC2626',
+    color: COLORS.danger,
   },
   solarDescBox: {
-    backgroundColor: '#F0F9FF',
-    borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    backgroundColor: COLORS.primaryBg,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 6,
-    marginBottom: 10,
+    marginBottom: SPACING.sm,
   },
   solarDescText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0369A1',
+    color: COLORS.primaryDark,
   },
   mapContainer: {
-    borderRadius: 14,
+    width: '100%',
+    height: 320,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
     position: 'relative',
-    backgroundColor: '#0B1120',
+    backgroundColor: COLORS.dark,
   },
   webView: {
     flex: 1,
-    backgroundColor: '#0B1120',
+    backgroundColor: COLORS.dark,
   },
   layerFloatBox: {
     position: 'absolute',
-    top: 8,
-    right: 8,
+    top: SPACING.sm,
+    right: SPACING.sm,
     flexDirection: 'row',
-    backgroundColor: 'rgba(15, 23, 42, 0.88)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: RADIUS.md,
     padding: 3,
     gap: 3,
-    borderWidth: 1,
-    borderColor: '#334155',
+    ...SHADOWS.floating,
   },
   layerChip: {
     paddingHorizontal: 7,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: RADIUS.sm,
   },
   layerChipActive: {
-    backgroundColor: '#0284C7',
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.button,
   },
   layerChipText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.textMuted,
   },
   layerChipTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.text,
   },
   solarTimingPill: {
     position: 'absolute',
-    left: 8,
-    bottom: 8,
+    left: SPACING.sm,
+    bottom: SPACING.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.9)', // darkSurface with opacity
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 5,
     gap: 5,
-    borderWidth: 1,
-    borderColor: '#334155',
   },
   timingPillText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: COLORS.surface,
   },
   timeRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: 10,
+    marginTop: SPACING.md,
   },
   quickTimeBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.sm,
     paddingVertical: 7,
     paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickTimeBtnActive: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0284C7',
+    backgroundColor: COLORS.primary,
+    ...SHADOWS.button,
   },
   quickTimeText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#475569',
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   quickTimeTextActive: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
   hudGrid: {
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 10,
+    gap: 4,
+    marginTop: SPACING.md,
   },
   hudCard: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 7,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.sm,
+    padding: 6,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    justifyContent: 'center',
   },
   hudLabel: {
-    fontSize: 9,
-    color: '#64748B',
+    fontSize: 8.5,
+    color: COLORS.textMuted,
     marginTop: 2,
     textAlign: 'center',
   },
   hudValue: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
     marginTop: 1,
+    textAlign: 'center',
   },
 });

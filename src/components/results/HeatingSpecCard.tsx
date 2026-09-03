@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Flame, ShieldCheck, Layers, Gauge } from 'lucide-react-native';
+import { Flame, ShieldCheck, Layers } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { IHeatingCalculation } from '../../types';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 interface HeatingSpecCardProps {
   heating: IHeatingCalculation;
@@ -11,8 +13,15 @@ export const HeatingSpecCard: React.FC<HeatingSpecCardProps> = ({ heating }) => 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Flame color="#EA580C" size={20} />
-        <Text style={styles.title}>🔥 Qishki Isitish (Tyoply Pol) Tizimi</Text>
+        <LinearGradient
+          colors={[COLORS.heat, COLORS.heatDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconCircle}
+        >
+          <Flame color={COLORS.surface} size={18} />
+        </LinearGradient>
+        <Text style={styles.title}>Qishki Isitish (Tyoply Pol) Tizimi</Text>
       </View>
 
       <View style={styles.grid2}>
@@ -37,8 +46,10 @@ export const HeatingSpecCard: React.FC<HeatingSpecCardProps> = ({ heating }) => 
       <View style={styles.divider} />
 
       <View style={styles.infoRow}>
-        <Layers size={16} color="#0284C7" />
-        <View style={{ flex: 1 }}>
+        <View style={styles.infoIconBoxCool}>
+          <Layers size={16} color={COLORS.cool} />
+        </View>
+        <View style={styles.infoTextWrapper}>
           <Text style={styles.infoTitle}>Quvurlar qadami (Shag):</Text>
           <Text style={styles.infoDesc}>• Oyna osti chegara zonasi: 10 sm zichlikda</Text>
           <Text style={styles.infoDesc}>• Markaziy yashash maydoni: 15 sm (Komfort)</Text>
@@ -46,8 +57,10 @@ export const HeatingSpecCard: React.FC<HeatingSpecCardProps> = ({ heating }) => 
       </View>
 
       <View style={styles.infoRow}>
-        <ShieldCheck size={16} color="#16A34A" />
-        <View style={{ flex: 1 }}>
+        <View style={styles.infoIconBoxSuccess}>
+          <ShieldCheck size={16} color={COLORS.success} />
+        </View>
+        <View style={styles.infoTextWrapper}>
           <Text style={styles.infoTitle}>Konstruksiya tavsiyasi:</Text>
           <Text style={styles.infoDesc}>{heating.screedDescription}</Text>
         </View>
@@ -58,72 +71,95 @@ export const HeatingSpecCard: React.FC<HeatingSpecCardProps> = ({ heating }) => 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    ...SHADOWS.card,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.text,
+    flex: 1,
   },
   grid2: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: SPACING.sm,
   },
   statItem: {
-    width: '47%',
-    backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 8,
+    width: '48%',
+    backgroundColor: COLORS.bg,
+    padding: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
   },
   label: {
     fontSize: 10.5,
-    color: '#64748B',
+    color: COLORS.textSecondary,
   },
   value: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 2,
+    color: COLORS.text,
+    marginTop: 3,
   },
   valueWarm: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#EA580C',
-    marginTop: 2,
+    color: COLORS.heat,
+    marginTop: 3,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
+    backgroundColor: COLORS.borderLight,
+    marginVertical: SPACING.md,
   },
   infoRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    gap: SPACING.sm + 2,
+    marginTop: SPACING.sm,
     alignItems: 'flex-start',
+  },
+  infoIconBoxCool: {
+    padding: 6,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.coolLight,
+  },
+  infoIconBoxSuccess: {
+    padding: 6,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.successBg,
+  },
+  infoTextWrapper: {
+    flex: 1,
   },
   infoTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E293B',
+    color: COLORS.text,
   },
   infoDesc: {
     fontSize: 11,
-    color: '#475569',
+    color: COLORS.textSecondary,
     marginTop: 2,
+    lineHeight: 16,
   },
 });

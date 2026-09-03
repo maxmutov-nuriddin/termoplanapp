@@ -73,6 +73,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
   onSelectWall,
 }) => {
   const {
+    roomArea,
     seasonMode,
     selectedTool,
     selectedElementId,
@@ -91,6 +92,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
     isOrthoSnapped,
     showDimensions,
   } = useCanvasStore(useShallow(s => ({
+    roomArea: s.roomArea,
     seasonMode: s.seasonMode,
     selectedTool: s.selectedTool,
     selectedElementId: s.selectedElementId,
@@ -636,15 +638,18 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
           {/* Bo'sh xona bo'lsa yo'riqnoma */}
           {!isDrawingWall && validRoomPoints.length === 0 && (
             <G transform={`translate(${canvasWidth / 2}, ${canvasHeight / 2 - 20})`}>
-              <Circle cx="0" cy="-20" r="30" fill="rgba(56, 189, 248, 0.1)" />
-              <SvgText x="0" y="-14" fill="#38BDF8" fontSize="22" textAnchor="middle">
+              <Circle cx="0" cy="-20" r="30" fill="rgba(15, 118, 110, 0.1)" />
+              <SvgText x="0" y="-14" fill="#0F766E" fontSize="22" textAnchor="middle">
                 ✏️
               </SvgText>
               <SvgText x="0" y="24" fill={isFullScreenStudio ? '#F8FAFC' : '#0F172A'} fontSize="14" fontWeight="bold" textAnchor="middle">
                 Xona Hali Chizilmagan
               </SvgText>
-              <SvgText x="0" y="44" fill="#94A3B8" fontSize="11" textAnchor="middle">
-                Pastdagi "Devor Pen" bilan chizing yoki tepadagi "To‘rtburchak"ni bosing
+              <SvgText x="0" y="44" fill="#64748B" fontSize="11" textAnchor="middle">
+                Pastdagi "Devor Pen" yordamida chizing
+              </SvgText>
+              <SvgText x="0" y="60" fill="#64748B" fontSize="11" textAnchor="middle">
+                yoki "To'rtburchak" shablonni tanlang
               </SvgText>
             </G>
           )}
@@ -697,15 +702,28 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
               />
             )}
 
-            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (
-              <AirflowConeRenderer
-                roomWidthM={6.5}
-                roomHeightM={5.0}
-                acPos={useCanvasStore.getState().acPosition || { x: 1.2, y: 0.5, targetAngle: 75 }}
-                furniture={useCanvasStore.getState().furniture || []}
-                recommendedBtu={recommendedBtu}
-              />
-            )}
+            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && !useCanvasStore.getState().acPosition && validRoomPoints.length >= 3 && (() => {
+              let targetX = 1.2, targetY = 0.5;
+              if (validRoomPoints.length >= 2) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity;
+                validRoomPoints.forEach(p => {
+                  if (p.x < minX) minX = p.x;
+                  if (p.x > maxX) maxX = p.x;
+                  if (p.y < minY) minY = p.y;
+                });
+                targetX = (minX + maxX) / 2;
+                targetY = minY + 0.2;
+              }
+              return (
+                <AirflowConeRenderer
+                  roomWidthM={roomArea ? Math.sqrt(roomArea) * 1.3 : 6.5}
+                  roomHeightM={roomArea ? Math.sqrt(roomArea) * 1.3 : 5.0}
+                  acPos={{ x: targetX, y: targetY, targetAngle: 90 }}
+                  furniture={useCanvasStore.getState().furniture || []}
+                  recommendedBtu={recommendedBtu}
+                />
+              );
+            })()}
 
             {/* 5. Parallel & 90° Smart Tekislash Yo'naltiruvchi Chiziqlari (Guidelines) */}
             {!readOnly &&

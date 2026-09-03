@@ -4,6 +4,7 @@ import { RotateCw, Plus, Minus, Trash2, X, Move, FlipHorizontal, Edit3 } from 'l
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { ElementDimensionModal } from './ElementDimensionModal';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 export const ElementPropertyBar: React.FC = () => {
   const {
@@ -39,30 +40,30 @@ export const ElementPropertyBar: React.FC = () => {
   const currentIntWall = selectedElementType === 'interior_wall' ? (state.interiorWalls || []).find((w) => w.id === selectedElementId) : null;
 
   const getTitle = () => {
-    if (selectedElementType === 'interior_wall') return `🧱 Ichki Devor (${currentIntWall?.length?.toFixed(2) || '3.00'}m, ${Math.round((currentIntWall?.thicknessM || 0.12) * 100)}sm)`;
+    if (selectedElementType === 'interior_wall') return `🧱 Ichki Devor (${currentIntWall?.length?.toFixed(2) || '3.00'}m)`;
     if (selectedElementType === 'window') return `🪟 Oyna (${currentWindow?.width?.toFixed(2) || '1.40'}m)`;
     if (selectedElementType === 'door') return `🚪 Eshik (${currentDoor?.width?.toFixed(2) || '0.90'}m)`;
-    if (selectedElementType === 'boiler') return '♨️ Kotyol (Qozonxona)';
-    if (selectedElementType === 'manifold') return '🚰 Kollektor (KL)';
+    if (selectedElementType === 'boiler') return '♨️ Kotyol';
+    if (selectedElementType === 'manifold') return '🚰 Kollektor';
     if (selectedElementType === 'ac') return '❄️ Konditsioner';
-    if (selectedElementType === 'furniture') return `🛏️ ${currentFurn?.label || 'Mebel'} (${currentFurn?.width?.toFixed(1)}x${currentFurn?.height?.toFixed(1)}m)`;
+    if (selectedElementType === 'furniture') return `🛏️ ${currentFurn?.label || 'Mebel'}`;
     if (selectedElementType === 'drawing_vertex') {
       const num = selectedVertexIndex !== null ? selectedVertexIndex + 1 : 1;
-      return `📍 N${num} Nuqta (Chizilmoqda)`;
+      return `📍 Nuqta N${num}`;
     }
     if (selectedElementType === 'vertex') {
       const num = selectedVertexIndex !== null ? selectedVertexIndex + 1 : 1;
-      return `📍 N${num} Burchak Nuqtasi`;
+      return `📍 Burchak N${num}`;
     }
     return 'Element';
   };
 
   const getDoorDirectionLabel = () => {
     const dir = currentDoor?.openDirection || 'inside_right';
-    if (dir === 'inside_right') return 'Ich O‘ng ↘';
-    if (dir === 'inside_left') return 'Ich Chap ↙';
-    if (dir === 'outside_right') return 'Tash O‘ng ↗';
-    if (dir === 'outside_left') return 'Tash Chap ↖';
+    if (dir === 'inside_right') return 'Ich O‘ng';
+    if (dir === 'inside_left') return 'Ich Chap';
+    if (dir === 'outside_right') return 'Tash O‘ng';
+    if (dir === 'outside_left') return 'Tash Chap';
     return 'Ochilish';
   };
 
@@ -77,71 +78,64 @@ export const ElementPropertyBar: React.FC = () => {
     <>
       <View style={styles.propBar}>
         <View style={styles.leftInfo}>
-          <Move size={13} color="#38BDF8" />
+          <Move size={14} color={COLORS.primaryLight} />
           <Text style={styles.titleText}>{getTitle()}</Text>
         </View>
 
         <View style={styles.actionsGroup}>
-          {/* Qo'lda aniq o'lcham yozish tugmasi */}
           {hasDimensions && (
             <TouchableOpacity style={[styles.actionBtn, styles.editDimBtn]} onPress={() => setDimensionModalVisible(true)}>
-              <Edit3 size={12} color="#FFFFFF" />
+              <Edit3 size={12} color={COLORS.surface} />
               <Text style={styles.editDimBtnText}>O‘lcham</Text>
             </TouchableOpacity>
           )}
 
-          {/* Eshikning ochilish yo'nalishini o'zgartirish (Door Swing Flip) */}
           {selectedElementType === 'door' && (
             <TouchableOpacity style={[styles.actionBtn, styles.flipBtn]} onPress={cycleDoorOpenDirection}>
-              <FlipHorizontal size={12} color="#FFFFFF" />
+              <FlipHorizontal size={12} color={COLORS.surface} />
               <Text style={styles.flipBtnText}>{getDoorDirectionLabel()}</Text>
             </TouchableOpacity>
           )}
 
-          {/* 45° Burish (Rotate) */}
           {(selectedElementType === 'furniture' || selectedElementType === 'ac' || selectedElementType === 'window') && (
             <TouchableOpacity style={styles.actionBtn} onPress={() => rotateSelectedElement(45)}>
-              <RotateCw size={12} color="#0284C7" />
+              <RotateCw size={12} color={COLORS.primaryLight} />
               <Text style={styles.actionBtnText}>45°</Text>
             </TouchableOpacity>
           )}
 
-          {/* O'lcham o'zgartirish (+ / -) */}
           {hasDimensions && (
             <View style={styles.stepperGroup}>
               <TouchableOpacity
                 style={styles.stepBtn}
                 onPress={() => resizeSelectedElement(selectedElementType === 'door' ? -0.05 : -0.1, -0.1)}
               >
-                <Minus size={12} color="#0F172A" />
+                <Minus size={14} color={COLORS.surface} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.stepBtn}
                 onPress={() => resizeSelectedElement(selectedElementType === 'door' ? 0.05 : 0.1, 0.1)}
               >
-                <Plus size={12} color="#0F172A" />
+                <Plus size={14} color={COLORS.surface} />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* O'chirish (Delete) */}
           {canDelete && (
             <TouchableOpacity
               style={[styles.actionBtn, styles.deleteBtn]}
               onPress={deleteSelectedElement}
             >
-              <Trash2 size={13} color="#EF4444" />
+              <Trash2 size={13} color={COLORS.danger} />
             </TouchableOpacity>
           )}
 
-          {/* Bekor qilish */}
           <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedElement(null, null)}>
-            <X size={14} color="#64748B" />
+            <X size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Aniq o'lcham yozish modali */}
       <ElementDimensionModal
         visible={dimensionModalVisible}
         onClose={() => setDimensionModalVisible(false)}
@@ -155,87 +149,85 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginHorizontal: 12,
-    marginTop: 6,
+    backgroundColor: COLORS.darkSurface,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#38BDF8',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    borderColor: COLORS.darkBorder,
+    ...SHADOWS.floating,
   },
   leftInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     flex: 1,
   },
   titleText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '800',
-    color: '#F8FAFC',
+    color: COLORS.surface,
   },
   actionsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    borderRadius: 8,
-    gap: 3.5,
+    backgroundColor: COLORS.dark,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    gap: 4,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: COLORS.darkBorder,
   },
   actionBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#38BDF8',
+    color: COLORS.primaryLight,
   },
   editDimBtn: {
-    backgroundColor: '#0284C7',
-    borderColor: '#0369A1',
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primaryLight,
   },
   editDimBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
   flipBtn: {
-    backgroundColor: '#16A34A',
-    borderColor: '#15803D',
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success,
   },
   flipBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
   stepperGroup: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    backgroundColor: COLORS.dark,
+    borderRadius: RADIUS.sm,
     padding: 2,
     gap: 2,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
   },
   stepBtn: {
-    padding: 4,
+    padding: 6,
   },
   deleteBtn: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    paddingHorizontal: 7,
+    backgroundColor: 'rgba(220, 38, 38, 0.2)',
+    borderColor: COLORS.danger,
+    paddingHorizontal: 8,
   },
   closeBtn: {
     padding: 4,
-    marginLeft: 2,
+    marginLeft: 4,
   },
 });

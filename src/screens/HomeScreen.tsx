@@ -23,15 +23,15 @@ import {
   Building,
   MapPin,
   Trash2,
-  Sparkles,
   Home,
-  Layers,
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useProjectStore } from '../store/projectStore';
 import { Header } from '../components/common/Header';
 import { CustomButton } from '../components/common/CustomButton';
 import { IProject } from '../types';
 import { UZBEKISTAN_REGIONS } from '../api/client';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -41,7 +41,6 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     createProject,
     selectProject,
     deleteProject,
-    isLoading,
     isRefreshing,
   } = useProjectStore();
 
@@ -103,6 +102,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         onPress={() => handleOpenProject(item)}
         activeOpacity={0.75}
       >
+        <View style={[styles.cardAccent, { backgroundColor: isCalculated ? COLORS.success : COLORS.cool }]} />
         <View style={styles.cardHeader}>
           <View style={styles.badgeRow}>
             <View style={[styles.statusBadge, isCalculated ? styles.badgeSuccess : styles.badgeDraft]}>
@@ -122,7 +122,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             onPress={() => handleDeleteProject(item)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Trash2 size={16} color="#94A3B8" />
+            <Trash2 size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
 
@@ -131,16 +131,16 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
         <View style={styles.cardFooter}>
           <View style={styles.footerItem}>
-            <MapPin size={13} color="#0284C7" />
+            <MapPin size={13} color={COLORS.primary} />
             <Text style={styles.footerText}>{regionName}</Text>
           </View>
           <View style={styles.footerItem}>
-            <Building size={13} color="#64748B" />
+            <Building size={13} color={COLORS.textSecondary} />
             <Text style={styles.footerText}>{item.totalArea || 24} m²</Text>
           </View>
           <View style={styles.openPill}>
             <Text style={styles.openPillText}>Ochish</Text>
-            <ChevronRight color="#0284C7" size={14} />
+            <ChevronRight color={COLORS.primary} size={14} />
           </View>
         </View>
       </TouchableOpacity>
@@ -150,16 +150,23 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
-        title="TermoPlan AI"
-        subtitle="Issiqlik, Tyoply Pol & Mikroiqlim Muhandisi"
+        title="TermoPlan"
+        subtitle="Issiqlik & Mikroiqlim Muhandisi"
         rightAction={
           <TouchableOpacity
             style={styles.newBtn}
             onPress={() => setModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Plus color="#FFFFFF" size={18} />
-            <Text style={styles.newBtnText}>Yangi</Text>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.newBtnGradient}
+            >
+              <Plus color={COLORS.surface} size={18} />
+              <Text style={styles.newBtnText}>Yangi</Text>
+            </LinearGradient>
           </TouchableOpacity>
         }
       />
@@ -173,18 +180,21 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => fetchProjects(true)}
-            colors={['#0284C7']}
-            tintColor="#0284C7"
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
           />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <Flame size={36} color="#0284C7" />
-            </View>
-            <Text style={styles.emptyTitle}>Hali loyihalar yo‘q</Text>
+            <LinearGradient
+              colors={[COLORS.primaryBg, COLORS.surfaceAlt]}
+              style={styles.emptyIconCircle}
+            >
+              <Flame size={36} color={COLORS.primary} />
+            </LinearGradient>
+            <Text style={styles.emptyTitle}>Loyihalar yo‘q</Text>
             <Text style={styles.emptyDesc}>
-              Bitta tugma orqali yangi xonani 0 dan yoki tayyor shablon bilan loyihalang:
+              Bitta tugma orqali yangi xonani yoki uyni noldan loyihalang:
             </Text>
 
             <View style={styles.quickPresetsRow}>
@@ -193,9 +203,9 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 onPress={() => handleCreateProject('🏡 Kottej (Zal + Yotoqxona)', 'private_house')}
                 activeOpacity={0.8}
               >
-                <Home size={22} color="#0284C7" />
+                <Home size={22} color={COLORS.primary} />
                 <Text style={styles.presetTitle}>Hovli / Kottej</Text>
-                <Text style={styles.presetSub}>Katta maydon, Kotyol & Pol</Text>
+                <Text style={styles.presetSub}>Katta maydon, Kotyol</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -203,7 +213,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 onPress={() => handleCreateProject('🏢 Kvartira (Mehmonxona)', 'apartment')}
                 activeOpacity={0.8}
               >
-                <Building size={22} color="#8B5CF6" />
+                <Building size={22} color={COLORS.cool} />
                 <Text style={styles.presetTitle}>Kvartira</Text>
                 <Text style={styles.presetSub}>Kollektor & Radiator</Text>
               </TouchableOpacity>
@@ -218,7 +228,6 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         }
       />
 
-      {/* Yangi loyiha yaratish modali */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.modalOverlay}>
@@ -230,14 +239,14 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <Text style={styles.modalTitle}>✨ Yangi Mikroiqlim Loyihasi</Text>
                   <Text style={styles.modalSubtitle}>
-                    Loyiha nomi va bino turini tanlang, geolokatsiya avtomatik ulanadi:
+                    Loyiha nomi va bino turini tanlang:
                   </Text>
 
                   <Text style={styles.inputLabel}>Loyiha Nomi *</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="Masalan: Yangi Hovli Mehmonxonasi"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.textMuted}
                     value={newTitle}
                     onChangeText={setNewTitle}
                     autoFocus
@@ -247,7 +256,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                   <TextInput
                     style={styles.input}
                     placeholder="Masalan: Sardor aka"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.textMuted}
                     value={clientName}
                     onChangeText={setClientName}
                   />
@@ -283,7 +292,14 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                       style={styles.confirmBtn}
                       onPress={() => handleCreateProject()}
                     >
-                      <Text style={styles.confirmBtnText}>🚀 Yaratish & O‘tish</Text>
+                      <LinearGradient
+                        colors={[COLORS.primary, COLORS.primaryLight]}
+                        style={styles.confirmGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                      >
+                        <Text style={styles.confirmBtnText}>🚀 Yaratish</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
                   </View>
                 </ScrollView>
@@ -299,44 +315,52 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
   },
   newBtn: {
+    borderRadius: RADIUS.pill,
+    overflow: 'hidden',
+    ...SHADOWS.button,
+  },
+  newBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0284C7',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     gap: 4,
   },
   newBtnText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
     fontSize: 13,
     fontWeight: '800',
   },
   listContent: {
-    padding: 16,
+    padding: SPACING.lg,
     paddingBottom: 40,
   },
   projectCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: COLORS.border,
+    position: 'relative',
+    overflow: 'hidden',
+    ...SHADOWS.card,
+  },
+  cardAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -344,56 +368,58 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
   },
   badgeSuccess: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: COLORS.successBg,
   },
   badgeDraft: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.borderLight,
   },
   statusText: {
     fontSize: 10.5,
     fontWeight: '800',
   },
   statusSuccessText: {
-    color: '#15803D',
+    color: COLORS.success,
   },
   statusDraftText: {
-    color: '#64748B',
+    color: COLORS.textSecondary,
   },
   typeBadge: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: COLORS.primaryBg,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
   },
   typeText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: '#0284C7',
+    fontWeight: '800',
+    color: COLORS.primary,
   },
   deleteIconBtn: {
     padding: 4,
   },
   projectTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   clientName: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 10,
+    fontSize: 12.5,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+    fontWeight: '500',
   },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: COLORS.borderLight,
     gap: 12,
   },
   footerItem: {
@@ -404,78 +430,78 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#475569',
+    color: COLORS.textSecondary,
   },
   openPill: {
     marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: COLORS.primaryBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.sm,
     gap: 2,
   },
   openPillText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#0284C7',
+    color: COLORS.primary,
   },
   emptyContainer: {
     alignItems: 'center',
-    padding: 24,
-    marginTop: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    padding: SPACING.xxl,
+    marginTop: SPACING.xl,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
+    ...SHADOWS.card,
   },
   emptyIconCircle: {
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
     marginBottom: 4,
   },
   emptyDesc: {
-    fontSize: 12.5,
-    color: '#64748B',
+    fontSize: 13,
+    color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
   },
   quickPresetsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     width: '100%',
-    marginBottom: 6,
+    marginBottom: SPACING.sm,
   },
   presetCard: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
     alignItems: 'center',
   },
   presetTitle: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 6,
+    color: COLORS.text,
+    marginTop: 8,
   },
   presetSub: {
     fontSize: 10,
-    color: '#64748B',
+    color: COLORS.textSecondary,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -483,104 +509,104 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'center',
-    padding: 20,
+    padding: SPACING.lg,
   },
   kavWrapper: {
     width: '100%',
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    ...SHADOWS.floating,
   },
   modalTitle: {
-    fontSize: 16.5,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#0F172A',
+    color: COLORS.text,
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   modalSubtitle: {
-    fontSize: 11.5,
-    color: '#64748B',
-    marginBottom: 14,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#334155',
+    color: COLORS.text,
     marginBottom: 6,
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   input: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13.5,
-    color: '#0F172A',
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.text,
   },
   typeSelectorRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 16,
+    gap: 10,
+    marginTop: 6,
+    marginBottom: SPACING.lg,
   },
   typeBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingVertical: 10,
+    borderColor: COLORS.border,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   typeBtnActive: {
-    backgroundColor: '#F0F9FF',
-    borderColor: '#0284C7',
+    backgroundColor: COLORS.primaryBg,
+    borderColor: COLORS.primary,
   },
   typeBtnText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: COLORS.textSecondary,
   },
   typeBtnTextActive: {
-    color: '#0284C7',
+    color: COLORS.primary,
     fontWeight: '800',
   },
   modalActions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 6,
+    gap: 12,
+    marginTop: SPACING.sm,
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: COLORS.surfaceAlt,
+    borderRadius: RADIUS.md,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   cancelBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#475569',
+    color: COLORS.textSecondary,
   },
   confirmBtn: {
     flex: 1.5,
-    backgroundColor: '#0284C7',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    ...SHADOWS.button,
+  },
+  confirmGradient: {
+    paddingVertical: 14,
     alignItems: 'center',
   },
   confirmBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
 });

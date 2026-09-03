@@ -6,6 +6,7 @@ import { ConstructorScreen } from '../screens/ConstructorScreen';
 import { CADStudioScreen } from '../screens/CADStudioScreen';
 import { ResultsScreen } from '../screens/ResultsScreen';
 import { PdfViewerScreen } from '../screens/PdfViewerScreen';
+import { COLORS } from '../theme';
 
 export type RootStackParamList = {
   HomeScreen: undefined;
@@ -25,7 +26,7 @@ export const AppNavigator: React.FC = () => {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        contentStyle: { backgroundColor: '#F8FAFC' },
+        contentStyle: { backgroundColor: COLORS.bg },
       }}
     >
       <Stack.Screen name="HomeScreen" component={HomeScreen} />

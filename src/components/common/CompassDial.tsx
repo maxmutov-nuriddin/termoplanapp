@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Svg, { Circle, Line, Text as SvgText, G, Path } from 'react-native-svg';
-import { RotateCw, Compass } from 'lucide-react-native';
+import Svg, { Circle, Line, Text as SvgText, G, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { Compass } from 'lucide-react-native';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 interface CompassDialProps {
   angle: number; // 0 to 360 degrees
@@ -17,7 +18,7 @@ export const CompassDial: React.FC<CompassDialProps> = ({ angle, onChangeAngle }
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Compass size={20} color="#0284C7" />
+        <Compass size={20} color={COLORS.primary} />
         <Text style={styles.title}>Dunyo Tomonlari & Quyosh Burchagi</Text>
       </View>
       <Text style={styles.subtitle}>
@@ -26,35 +27,42 @@ export const CompassDial: React.FC<CompassDialProps> = ({ angle, onChangeAngle }
 
       <View style={styles.dialContainer}>
         <Svg width={180} height={180} viewBox="-90 -90 180 180">
+          <Defs>
+            <LinearGradient id="needleGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={COLORS.heat} stopOpacity="1" />
+              <Stop offset="1" stopColor={COLORS.danger} stopOpacity="1" />
+            </LinearGradient>
+          </Defs>
+
           {/* Asosiy doira */}
-          <Circle cx="0" cy="0" r="75" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="2" />
-          <Circle cx="0" cy="0" r="45" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+          <Circle cx="0" cy="0" r="75" fill={COLORS.surfaceAlt} stroke={COLORS.border} strokeWidth="2" />
+          <Circle cx="0" cy="0" r="45" fill={COLORS.surface} stroke={COLORS.borderLight} strokeWidth="1" />
 
           {/* Dunyo tomonlari harflari */}
-          <SvgText x="0" y="-55" fill="#DC2626" fontSize="13" fontWeight="bold" textAnchor="middle">N (Shimol)</SvgText>
-          <SvgText x="60" y="4" fill="#0284C7" fontSize="12" fontWeight="bold" textAnchor="middle">E</SvgText>
-          <SvgText x="0" y="65" fill="#EA580C" fontSize="12" fontWeight="bold" textAnchor="middle">S (Janub)</SvgText>
-          <SvgText x="-60" y="4" fill="#D97706" fontSize="12" fontWeight="bold" textAnchor="middle">W (G‘arb)</SvgText>
+          <SvgText x="0" y="-55" fill={COLORS.danger} fontSize="13" fontWeight="bold" textAnchor="middle">N (Shimol)</SvgText>
+          <SvgText x="60" y="4" fill={COLORS.primary} fontSize="12" fontWeight="bold" textAnchor="middle">E</SvgText>
+          <SvgText x="0" y="65" fill={COLORS.heat} fontSize="12" fontWeight="bold" textAnchor="middle">S (Janub)</SvgText>
+          <SvgText x="-60" y="4" fill={COLORS.warning} fontSize="12" fontWeight="bold" textAnchor="middle">W (G‘arb)</SvgText>
 
           {/* Aylantirilgan strelka */}
           <G transform={`rotate(${angle})`}>
-            <Line x1="0" y1="0" x2="0" y2="-68" stroke="#DC2626" strokeWidth="4" strokeLinecap="round" />
-            <Path d="M 0 -72 L -6 -60 L 6 -60 Z" fill="#DC2626" />
-            <Line x1="0" y1="0" x2="0" y2="68" stroke="#64748B" strokeWidth="3" strokeLinecap="round" />
-            <Circle cx="0" cy="0" r="5" fill="#0F172A" />
+            <Line x1="0" y1="0" x2="0" y2="-68" stroke="url(#needleGrad)" strokeWidth="4" strokeLinecap="round" />
+            <Path d="M 0 -72 L -6 -60 L 6 -60 Z" fill={COLORS.danger} />
+            <Line x1="0" y1="0" x2="0" y2="68" stroke={COLORS.textMuted} strokeWidth="3" strokeLinecap="round" />
+            <Circle cx="0" cy="0" r="5" fill={COLORS.text} />
           </G>
         </Svg>
       </View>
 
       <View style={styles.controlsRow}>
-        <TouchableOpacity style={styles.stepBtn} onPress={() => rotateStep(-45)}>
+        <TouchableOpacity style={styles.stepBtn} onPress={() => rotateStep(-45)} activeOpacity={0.7}>
           <Text style={styles.stepBtnText}>-45°</Text>
         </TouchableOpacity>
         <View style={styles.angleDisplay}>
           <Text style={styles.angleText}>{angle}°</Text>
           <Text style={styles.angleSub}>Shimoldan burilish</Text>
         </View>
-        <TouchableOpacity style={styles.stepBtn} onPress={() => rotateStep(45)}>
+        <TouchableOpacity style={styles.stepBtn} onPress={() => rotateStep(45)} activeOpacity={0.7}>
           <Text style={styles.stepBtnText}>+45°</Text>
         </TouchableOpacity>
       </View>
@@ -64,13 +72,14 @@ export const CompassDial: React.FC<CompassDialProps> = ({ angle, onChangeAngle }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: SPACING.sm,
+    ...SHADOWS.card,
   },
   header: {
     flexDirection: 'row',
@@ -80,18 +89,19 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: COLORS.textSecondary,
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: SPACING.md,
     alignSelf: 'flex-start',
+    lineHeight: 18,
   },
   dialContainer: {
-    marginVertical: 8,
+    marginVertical: SPACING.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -100,31 +110,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   stepBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.surfaceAlt,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: RADIUS.pill,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: COLORS.border,
   },
   stepBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
+    color: COLORS.text,
   },
   angleDisplay: {
     alignItems: 'center',
   },
   angleText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#0284C7',
+    color: COLORS.primary,
   },
   angleSub: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: COLORS.textMuted,
+    fontWeight: '600',
   },
 });

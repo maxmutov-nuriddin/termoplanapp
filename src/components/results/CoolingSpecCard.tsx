@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Snowflake, CheckCircle2, HeartPulse, Compass } from 'lucide-react-native';
+import { Snowflake, HeartPulse } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ICoolingCalculation } from '../../types';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 interface CoolingSpecCardProps {
   cooling: ICoolingCalculation;
@@ -11,15 +13,27 @@ export const CoolingSpecCard: React.FC<CoolingSpecCardProps> = ({ cooling }) => 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Snowflake color="#0284C7" size={20} />
-        <Text style={styles.title}>❄️ Yozgi Sovutish & Smart AC Tanlovi</Text>
+        <LinearGradient
+          colors={[COLORS.cool, COLORS.coolDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconCircle}
+        >
+          <Snowflake color={COLORS.surface} size={18} />
+        </LinearGradient>
+        <Text style={styles.title}>Yozgi Sovutish & Smart AC Tanlovi</Text>
       </View>
 
-      <View style={styles.highlightBox}>
+      <LinearGradient
+        colors={[COLORS.coolLight, COLORS.bg]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.highlightBox}
+      >
         <Text style={styles.hlTitle}>Tavsiya etilgan Konditsioner:</Text>
         <Text style={styles.hlBtu}>{cooling.recommendedBtu.toLocaleString()} BTU ({cooling.recommendedKw} kW)</Text>
         <Text style={styles.hlSub}>{cooling.recommendedModel}</Text>
-      </View>
+      </LinearGradient>
 
       <View style={styles.grid2}>
         <View style={styles.statItem}>
@@ -36,7 +50,7 @@ export const CoolingSpecCard: React.FC<CoolingSpecCardProps> = ({ cooling }) => 
 
       <View style={styles.safetyBox}>
         <View style={styles.safetyHeader}>
-          <HeartPulse color="#15803D" size={16} />
+          <HeartPulse color={COLORS.success} size={16} />
           <Text style={styles.safetyTitle}>Salomatlik & Xavfsiz Joylashuv:</Text>
         </View>
         <Text style={styles.safetyDesc}>
@@ -53,103 +67,112 @@ export const CoolingSpecCard: React.FC<CoolingSpecCardProps> = ({ cooling }) => 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    ...SHADOWS.card,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.text,
+    flex: 1,
   },
   highlightBox: {
-    backgroundColor: '#F0F9FF',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    borderRadius: 12,
-    padding: 14,
+    borderColor: COLORS.coolLight,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   hlTitle: {
-    fontSize: 11,
-    color: '#0369A1',
+    fontSize: 11.5,
+    color: COLORS.coolDark,
     fontWeight: '600',
   },
   hlBtu: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0284C7',
+    color: COLORS.cool,
     marginTop: 2,
   },
   hlSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
+    fontSize: 11.5,
+    color: COLORS.textSecondary,
+    marginTop: 3,
+    fontWeight: '500',
   },
   grid2: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACING.sm,
   },
   statItem: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: COLORS.bg,
+    padding: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
   },
   label: {
     fontSize: 10.5,
-    color: '#64748B',
+    color: COLORS.textSecondary,
   },
   value: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.text,
     marginTop: 2,
   },
   valueCool: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#0284C7',
+    color: COLORS.cool,
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
+    backgroundColor: COLORS.borderLight,
+    marginVertical: SPACING.md,
   },
   safetyBox: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: COLORS.successBg,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: COLORS.success,
   },
   safetyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    gap: SPACING.xs + 2,
+    marginBottom: SPACING.xs + 2,
   },
   safetyTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#166534',
+    color: COLORS.primaryDark,
   },
   safetyDesc: {
     fontSize: 11,
-    color: '#14532D',
+    color: COLORS.textSecondary,
     marginTop: 3,
     lineHeight: 16,
   },

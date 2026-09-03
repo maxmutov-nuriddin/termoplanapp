@@ -1,5 +1,7 @@
 import React from 'react';
 import { View, Text, Modal, ActivityIndicator, StyleSheet } from 'react-native';
+import { Flame } from 'lucide-react-native';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 interface LoadingModalProps {
   visible: boolean;
@@ -11,7 +13,10 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, message = '
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.box}>
-          <ActivityIndicator size="large" color="#0284C7" />
+          <View style={styles.iconCircle}>
+            <Flame color={COLORS.primary} size={24} />
+          </View>
+          <ActivityIndicator size="large" color={COLORS.primaryLight} style={styles.spinner} />
           <Text style={styles.message}>{message}</Text>
         </View>
       </View>
@@ -22,28 +27,35 @@ export const LoadingModal: React.FC<LoadingModalProps> = ({ visible, message = '
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: SPACING.xxl,
   },
   box: {
-    backgroundColor: '#FFFFFF',
-    padding: 24,
-    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.xxl,
+    borderRadius: RADIUS.xl,
     alignItems: 'center',
-    width: 220,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    width: 240,
+    ...SHADOWS.floating,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
+  spinner: {
+    marginBottom: SPACING.md,
   },
   message: {
-    marginTop: 14,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: '700',
+    color: COLORS.text,
     textAlign: 'center',
   },
 });

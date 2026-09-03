@@ -1,115 +1,117 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { MousePointer, PenTool, Maximize2, DoorClosed, Flame, Wind, Gauge, Lock, Unlock, Ban } from 'lucide-react-native';
-import { CanvasTool, useCanvasStore } from '../../store/canvasStore';
+import { Square, ArrowRight, MousePointer2, Refrigerator } from 'lucide-react-native';
+import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 export const FigmaToolDock: React.FC = () => {
-  const { selectedTool, setSelectedTool, isLayoutLocked, toggleLayoutLock } = useCanvasStore(
+  const { toolMode, setToolMode } = useCanvasStore(
     useShallow((s) => ({
-      selectedTool: s.selectedTool,
-      setSelectedTool: s.setSelectedTool,
-      isLayoutLocked: s.isLayoutLocked,
-      toggleLayoutLock: s.toggleLayoutLock,
+      toolMode: s.toolMode,
+      setToolMode: s.setToolMode,
     }))
   );
 
-  const dockItems: Array<{ id: CanvasTool; label: string; icon: React.ReactNode }> = [
-    { id: 'select', label: 'Tanlash', icon: <MousePointer size={18} color={selectedTool === 'select' ? '#FFFFFF' : '#94A3B8'} /> },
-    { id: 'pen_wall', label: 'Tashqi Devor', icon: <PenTool size={18} color={selectedTool === 'pen_wall' ? '#FFFFFF' : '#38BDF8'} /> },
-    { id: 'pen_room', label: 'Ichki Devor', icon: <PenTool size={18} color={selectedTool === 'pen_room' ? '#FFFFFF' : '#38BDF8'} /> },
-    { id: 'window', label: '+ Oyna', icon: <Maximize2 size={18} color={selectedTool === 'window' ? '#FFFFFF' : '#38BDF8'} /> },
-    { id: 'door', label: '+ Eshik', icon: <DoorClosed size={18} color={selectedTool === 'door' ? '#FFFFFF' : '#4ADE80'} /> },
-    { id: 'boiler', label: '+ Kotyol', icon: <Flame size={18} color={selectedTool === 'boiler' ? '#FFFFFF' : '#EF4444'} /> },
-    { id: 'manifold', label: '+ Kollektor', icon: <Gauge size={18} color={selectedTool === 'manifold' ? '#FFFFFF' : '#FB923C'} /> },
-    { id: 'ac', label: '+ AC', icon: <Wind size={18} color={selectedTool === 'ac' ? '#FFFFFF' : '#38BDF8'} /> },
-    { id: 'exclude_zone', label: 'Yer Istisno', icon: <Ban size={18} color={selectedTool === 'exclude_zone' ? '#FFFFFF' : '#EF4444'} /> },
-  ];
-
   return (
-    <View style={styles.dockContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockScroll}>
+    <View style={styles.dockWrapper}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockContainer}>
         <TouchableOpacity
-          style={[styles.dockBtn, isLayoutLocked && styles.dockBtnDangerActive]}
-          onPress={toggleLayoutLock}
-          activeOpacity={0.7}
+          style={[styles.toolBtn, toolMode === 'select' && styles.toolBtnActive]}
+          onPress={() => setToolMode('select')}
         >
-          {isLayoutLocked ? <Lock size={18} color="#FFFFFF" /> : <Unlock size={18} color="#94A3B8" />}
-          <Text style={[styles.dockLabel, isLayoutLocked && styles.dockLabelActive]}>
-            {isLayoutLocked ? 'Qotirilgan' : 'Qotirish'}
-          </Text>
+          <MousePointer2 size={18} color={toolMode === 'select' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'select' && styles.toolTextActive]}>Tanlash</Text>
         </TouchableOpacity>
 
-        <View style={styles.dockDivider} />
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'draw_room' && styles.toolBtnActive]}
+          onPress={() => setToolMode('draw_room')}
+        >
+          <Square size={18} color={toolMode === 'draw_room' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'draw_room' && styles.toolTextActive]}>Xona</Text>
+        </TouchableOpacity>
 
-        {dockItems.map((item) => {
-          const isActive = selectedTool === item.id;
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.dockBtn, isActive && styles.dockBtnActive]}
-              onPress={() => setSelectedTool(item.id)}
-              activeOpacity={0.7}
-            >
-              {item.icon}
-              <Text style={[styles.dockLabel, isActive && styles.dockLabelActive]}>{item.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'draw_interior_wall' && styles.toolBtnActive]}
+          onPress={() => setToolMode('draw_interior_wall')}
+        >
+          <ArrowRight size={18} color={toolMode === 'draw_interior_wall' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'draw_interior_wall' && styles.toolTextActive]}>To'siq</Text>
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'place_door' && styles.toolBtnActive]}
+          onPress={() => setToolMode('place_door')}
+        >
+          <Square size={18} color={toolMode === 'place_door' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'place_door' && styles.toolTextActive]}>Eshik</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'place_window' && styles.toolBtnActive]}
+          onPress={() => setToolMode('place_window')}
+        >
+          <Square size={18} color={toolMode === 'place_window' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'place_window' && styles.toolTextActive]}>Oyna</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.toolBtn, toolMode === 'place_furniture' && styles.toolBtnActive]}
+          onPress={() => setToolMode('place_furniture')}
+        >
+          <Refrigerator size={18} color={toolMode === 'place_furniture' ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, toolMode === 'place_furniture' && styles.toolTextActive]}>Mebel</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  dockContainer: {
-    backgroundColor: '#0F172A',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    marginHorizontal: 12,
-    marginBottom: 8,
+  dockWrapper: {
+    position: 'absolute',
+    bottom: SPACING.xl,
+    alignSelf: 'center',
+    backgroundColor: COLORS.darkSurface,
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    borderColor: COLORS.darkBorder,
+    ...SHADOWS.floating,
   },
-  dockScroll: {
-    gap: 6,
+  dockContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    gap: SPACING.sm,
   },
-  dockBtn: {
+  toolBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    minWidth: 58,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: RADIUS.md,
   },
-  dockBtnActive: {
-    backgroundColor: '#0284C7',
+  toolBtnActive: {
+    backgroundColor: 'rgba(20, 184, 166, 0.15)', // primaryLight with opacity
   },
-  dockBtnDangerActive: {
-    backgroundColor: '#EF4444',
+  toolText: {
+    fontSize: 9.5,
+    color: COLORS.textMuted,
+    marginTop: 4,
+    fontWeight: '600',
   },
-  dockDivider: {
+  toolTextActive: {
+    color: COLORS.primaryLight,
+    fontWeight: '800',
+  },
+  divider: {
     width: 1,
-    height: '60%',
-    backgroundColor: '#334155',
+    height: 24,
+    backgroundColor: COLORS.darkBorder,
     marginHorizontal: 4,
-  },
-  dockLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#94A3B8',
-    marginTop: 3,
-  },
-  dockLabelActive: {
-    color: '#FFFFFF',
   },
 });

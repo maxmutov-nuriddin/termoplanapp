@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Sun, CloudSun, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
+import { CloudSun, AlertTriangle, CheckCircle2 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ClimateRegion } from '../../types';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 interface ClimateSummaryCardProps {
   region: ClimateRegion;
@@ -19,8 +21,15 @@ export const ClimateSummaryCard: React.FC<ClimateSummaryCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <CloudSun color="#EA580C" size={20} />
-        <Text style={styles.title}>📍 Hududiy Iqlim & Quyosh Insolyatsiyasi</Text>
+        <LinearGradient
+          colors={[COLORS.heatLight, COLORS.heat]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconCircle}
+        >
+          <CloudSun color={COLORS.surface} size={18} />
+        </LinearGradient>
+        <Text style={styles.title}>Hududiy Iqlim & Quyosh Insolyatsiyasi</Text>
       </View>
 
       <Text style={styles.regionName}>{region.nameUz}</Text>
@@ -42,14 +51,14 @@ export const ClimateSummaryCard: React.FC<ClimateSummaryCardProps> = ({
 
       {highRiskOverheating ? (
         <View style={styles.warningBox}>
-          <AlertTriangle color="#B45309" size={16} />
+          <AlertTriangle color={COLORS.warning} size={18} />
           <Text style={styles.warningText}>
             Janub/G‘arb fasadi kuchli qiziydi. Yozgi konditsioner quvvati +25% zaxira bilan oshirildi va qishda qizib ketmaslik uchun avtomatik servo-klapan qo‘shildi.
           </Text>
         </View>
       ) : (
         <View style={styles.successBox}>
-          <CheckCircle2 color="#15803D" size={16} />
+          <CheckCircle2 color={COLORS.success} size={18} />
           <Text style={styles.successText}>
             Mo‘tadil quyosh tushishi. Tabiiy isitish va qulay mikroiqlim balansi taʼminlangan.
           </Text>
@@ -61,91 +70,104 @@ export const ClimateSummaryCard: React.FC<ClimateSummaryCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    ...SHADOWS.card,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
+  },
+  iconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.text,
+    flex: 1,
   },
   regionName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0284C7',
-    marginTop: 6,
-    marginBottom: 12,
+    color: COLORS.coolDark,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm + 2,
     alignItems: 'center',
   },
   statValWarm: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#EA580C',
+    color: COLORS.heat,
   },
   statValCool: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0284C7',
+    color: COLORS.cool,
   },
   statVal: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#334155',
+    color: COLORS.text,
   },
   statLbl: {
-    fontSize: 9.5,
-    color: '#64748B',
+    fontSize: 10,
+    color: COLORS.textSecondary,
     marginTop: 2,
     textAlign: 'center',
   },
   warningBox: {
     flexDirection: 'row',
-    backgroundColor: '#FEF3C7',
-    borderRadius: 8,
-    padding: 10,
-    gap: 8,
+    backgroundColor: COLORS.warningBg,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.warning,
   },
   warningText: {
-    fontSize: 11,
-    color: '#92400E',
+    fontSize: 11.5,
+    color: COLORS.heatDark,
     flex: 1,
-    lineHeight: 15,
+    lineHeight: 16,
   },
   successBox: {
     flexDirection: 'row',
-    backgroundColor: '#F0FDF4',
-    borderRadius: 8,
-    padding: 10,
-    gap: 8,
+    backgroundColor: COLORS.successBg,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    gap: SPACING.sm,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.success,
   },
   successText: {
-    fontSize: 11,
-    color: '#166534',
+    fontSize: 11.5,
+    color: COLORS.primaryDark,
     flex: 1,
-    lineHeight: 15,
+    lineHeight: 16,
   },
 });

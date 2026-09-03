@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Printer, Download, CheckCircle2, ShieldCheck } from 'lucide-react-native';
+import { Share2, CheckCircle2 } from 'lucide-react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
 import { Header } from '../components/common/Header';
 import { CustomButton } from '../components/common/CustomButton';
 import { ProjectApi } from '../api/client';
 import { useProjectStore } from '../store/projectStore';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const PdfViewerScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -41,73 +41,79 @@ export const PdfViewerScreen: React.FC<{ navigation: any; route: any }> = ({ nav
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
-        title="4-Sahifali Muhandislik PDF Loyihasi"
+        title="4-Sahifali Muhandislik PDF"
         subtitle="Rasmiy loyiha hujjati va smeta"
         showBack
         onBack={() => navigation.goBack()}
         rightAction={
           <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
-            <Share2 size={20} color="#0284C7" />
+            <Share2 size={20} color={COLORS.primary} />
           </TouchableOpacity>
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* PDF Sahifalari prevyusi kartalari */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Sahifa 1 */}
         <View style={styles.pageCard}>
+          <View style={[styles.cardAccent, { backgroundColor: COLORS.success }]} />
           <View style={styles.pageBadge}><Text style={styles.pageBadgeText}>1-SAHIFA</Text></View>
-          <Text style={styles.pageTitle}>📍 Bino Pasporti, Lokatsiya & Quyosh Insolyatsiyasi</Text>
+          <Text style={styles.pageTitle}>📍 Bino Pasporti & Lokatsiya</Text>
           <Text style={styles.pageDesc}>
             O‘zbekiston iqlim ko‘rsatkichlari, -15°C / +42°C minimum/maksimumlar, fasad burchagi va umumiy energetik yuk.
           </Text>
           <View style={styles.statusRow}>
-            <CheckCircle2 color="#15803D" size={16} />
+            <CheckCircle2 color={COLORS.success} size={16} />
             <Text style={styles.statusText}>Vektor grafikada to‘liq shakllantirilgan</Text>
           </View>
         </View>
 
+        {/* Sahifa 2 */}
         <View style={styles.pageCard}>
-          <View style={[styles.pageBadge, { backgroundColor: '#FFEDD5' }]}><Text style={[styles.pageBadgeText, { color: '#C2410C' }]}>2-SAHIFA</Text></View>
-          <Text style={styles.pageTitle}>🔥 Qishki Rejim — 2D Tyoply Pol Quvurlar Sxemasi</Text>
+          <View style={[styles.cardAccent, { backgroundColor: COLORS.heat }]} />
+          <View style={[styles.pageBadge, { backgroundColor: COLORS.heatLight }]}><Text style={[styles.pageBadgeText, { color: COLORS.heatDark }]}>2-SAHIFA</Text></View>
+          <Text style={styles.pageTitle}>🔥 Qishki Rejim — 2D Tyoply Pol</Text>
           <Text style={styles.pageDesc}>
             Salyangoz (Spiral) marshruti, oyna osti 10 sm zich zona, kollektor ulanishi va konturlar bo‘linishi.
           </Text>
           <View style={styles.statusRow}>
-            <CheckCircle2 color="#15803D" size={16} />
+            <CheckCircle2 color={COLORS.success} size={16} />
             <Text style={styles.statusText}>Rangli masshtabli 2D chizma mavjud</Text>
           </View>
         </View>
 
+        {/* Sahifa 3 */}
         <View style={styles.pageCard}>
-          <View style={[styles.pageBadge, { backgroundColor: '#E0F2FE' }]}><Text style={[styles.pageBadgeText, { color: '#0369A1' }]}>3-SAHIFA</Text></View>
-          <Text style={styles.pageTitle}>❄️ Yozgi Rejim — 2D Konditsioner & Havo Oqimi</Text>
+          <View style={[styles.cardAccent, { backgroundColor: COLORS.cool }]} />
+          <View style={[styles.pageBadge, { backgroundColor: COLORS.coolLight }]}><Text style={[styles.pageBadgeText, { color: COLORS.coolDark }]}>3-SAHIFA</Text></View>
+          <Text style={styles.pageTitle}>❄️ Yozgi Rejim — Konditsioner & Havo Oqimi</Text>
           <Text style={styles.pageDesc}>
             Krovat/divandan sovuq havoni chetlab o‘tuvchi 55° konussimon havo oqimi, tashqi blok va mis trassa yo‘nalishi.
           </Text>
           <View style={styles.statusRow}>
-            <CheckCircle2 color="#15803D" size={16} />
+            <CheckCircle2 color={COLORS.success} size={16} />
             <Text style={styles.statusText}>Salomatlik xavfsizligi tasdiqlangan</Text>
           </View>
         </View>
 
+        {/* Sahifa 4 */}
         <View style={styles.pageCard}>
+          <View style={[styles.cardAccent, { backgroundColor: '#8B5CF6' }]} />
           <View style={[styles.pageBadge, { backgroundColor: '#F3E8FF' }]}><Text style={[styles.pageBadgeText, { color: '#7E22CE' }]}>4-SAHIFA</Text></View>
-          <Text style={styles.pageTitle}>📋 Birlashgan Smeta & Ustalarga Montaj Yo‘riqnomasi</Text>
+          <Text style={styles.pageTitle}>📋 Birlashgan Smeta & Ustalarga Yo‘riqnoma</Text>
           <Text style={styles.pageDesc}>
             Quvurlar, kollektor, EPS izolyatsiya, damping lenta, konditsioner, mis quvurlar va opressovka qoidalari.
           </Text>
           <View style={styles.statusRow}>
-            <CheckCircle2 color="#15803D" size={16} />
+            <CheckCircle2 color={COLORS.success} size={16} />
             <Text style={styles.statusText}>Narxlar va miqdorlar to‘liq hisoblangan</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Pastki Ulashish tugmasi */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom || SPACING.lg }]}>
         <CustomButton
           title="Telegram / Messenjerlarga Yuborish"
-          icon={<Share2 color="#FFFFFF" size={18} />}
+          icon={<Share2 color={COLORS.surface} size={18} />}
           onPress={handleShare}
           loading={sharing}
         />
@@ -119,71 +125,76 @@ export const PdfViewerScreen: React.FC<{ navigation: any; route: any }> = ({ nav
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
   },
   iconBtn: {
-    padding: 6,
-    backgroundColor: '#E0F2FE',
-    borderRadius: 8,
+    padding: 8,
+    backgroundColor: COLORS.primaryBg,
+    borderRadius: RADIUS.pill,
   },
   scrollContent: {
-    padding: 16,
-    gap: 12,
+    padding: SPACING.lg,
+    gap: SPACING.md,
   },
   pageCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: COLORS.border,
+    position: 'relative',
+    overflow: 'hidden',
+    ...SHADOWS.card,
+  },
+  cardAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   pageBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: COLORS.borderLight,
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.sm,
   },
   pageBadgeText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#475569',
+    color: COLORS.textSecondary,
   },
   pageTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 6,
   },
   pageDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 16,
-    marginBottom: 10,
+    fontSize: 12.5,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    marginBottom: SPACING.md,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingTop: 8,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: COLORS.borderLight,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#15803D',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: COLORS.success,
   },
   footer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    padding: 16,
+    borderTopColor: COLORS.border,
+    padding: SPACING.lg,
   },
 });

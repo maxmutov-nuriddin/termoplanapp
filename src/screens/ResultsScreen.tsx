@@ -14,6 +14,7 @@ import { SmetaTable } from '../components/results/SmetaTable';
 import { useProjectStore } from '../store/projectStore';
 import { UZBEKISTAN_REGIONS, ProjectApi } from '../api/client';
 import { IHeatingCalculation, ICoolingCalculation, ISmeta } from '../types';
+import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const insets = useSafeAreaInsets();
@@ -25,7 +26,6 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
 
   const region = UZBEKISTAN_REGIONS.find((r) => r.id === currentProject?.regionId) || UZBEKISTAN_REGIONS[0];
 
-  // Default fallback hisob-kitoblar agar backend hali javob bermagan bo'lsa
   const defaultHeating: IHeatingCalculation = {
     totalHeatLossW: 1216,
     specificHeatLossWM2: 38,
@@ -128,18 +128,17 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Header
-        title="Loyiha Natijalari & Smeta"
+        title="Natijalar & Smeta"
         subtitle={currentProject?.title || 'TermoPlan Loyihasi'}
         showBack
         onBack={() => navigation.navigate('HomeScreen')}
         rightAction={
           <TouchableOpacity style={styles.shareIconBtn} onPress={handleShareToTelegram}>
-            <Share2 color="#0284C7" size={20} />
+            <Share2 color={COLORS.primary} size={20} />
           </TouchableOpacity>
         }
       />
 
-      {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === 'overview' && styles.activeTabBtn]}
@@ -170,8 +169,7 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 2D Sxema Prevyusi */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.canvasCard}>
           <Text style={styles.canvasTitle}>
             {activeTab === 'summer' ? '❄️ 2D Konditsioner & Havo Oqimi Xaritasi' : '🔥 2D Tyoply Pol Quvurlar Sxemasi'}
@@ -184,7 +182,6 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
           />
         </View>
 
-        {/* Tab tarkiblari */}
         {activeTab === 'overview' && (
           <>
             <ClimateSummaryCard
@@ -199,25 +196,22 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
         )}
 
         {activeTab === 'winter' && <HeatingSpecCard heating={heatingData} />}
-
         {activeTab === 'summer' && <CoolingSpecCard cooling={coolingData} />}
-
         {activeTab === 'smeta' && <SmetaTable smeta={smetaData} />}
       </ScrollView>
 
-      {/* Pastki Harakatlar */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom || SPACING.lg }]}>
         <View style={styles.btnRow}>
           <CustomButton
             title="4-Sahifali PDF"
-            icon={<FileText color="#0284C7" size={18} />}
+            icon={<FileText color={COLORS.primary} size={18} />}
             variant="outline"
             onPress={handleOpenPdfViewer}
             style={{ flex: 1 }}
           />
           <CustomButton
             title="Telegramga Yuborish"
-            icon={<Send color="#FFFFFF" size={18} />}
+            icon={<Send color={COLORS.surface} size={18} />}
             variant="primary"
             onPress={handleShareToTelegram}
             loading={downloading}
@@ -232,66 +226,67 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.bg,
   },
   shareIconBtn: {
-    padding: 6,
-    backgroundColor: '#E0F2FE',
-    borderRadius: 8,
+    padding: 8,
+    backgroundColor: COLORS.primaryBg,
+    borderRadius: RADIUS.pill,
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    gap: 6,
+    borderBottomColor: COLORS.border,
+    gap: SPACING.xs,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceAlt,
   },
   activeTabBtn: {
-    backgroundColor: '#0284C7',
+    backgroundColor: COLORS.primary,
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#475569',
+    color: COLORS.textSecondary,
   },
   activeTabText: {
-    color: '#FFFFFF',
+    color: COLORS.surface,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 30,
+    padding: SPACING.lg,
+    paddingBottom: 40,
   },
   canvasCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 12,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.card,
   },
   canvasTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
   },
   footer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    padding: 14,
+    borderTopColor: COLORS.border,
+    padding: SPACING.lg,
   },
   btnRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: SPACING.md,
   },
 });
