@@ -118,54 +118,92 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
 
   if (valid.length < 3) return null;
 
-  const mX = (manifoldPos?.x || 1.0) * scale + padding;
-  const mY = (manifoldPos?.y || 1.0) * scale + padding;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  valid.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+
+  const mX = manifoldPos && Number.isFinite(manifoldPos.x)
+    ? manifoldPos.x * scale + padding
+    : (minX + 0.35) * scale + padding;
+  const mY = manifoldPos && Number.isFinite(manifoldPos.y)
+    ? manifoldPos.y * scale + padding
+    : (minY + 0.35) * scale + padding;
 
   const renderedCircuits = useMemo(() => {
-    const hasValid = (circuits || []).some(c => c && (c.feedPoints || c.returnPoints));
-    if (hasValid) return circuits;
-
     if (valid.length < 3) return [];
 
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    valid.forEach(p => {
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
-    });
+    const margin = 0.28 * scale;
+    const p = 0.18 * scale; // 18cm quvur oraliq qadami
 
-    const inset = 0.28;
-    const step = 0.20;
-    const feedPts: string[] = [];
-    const retPts: string[] = [];
+    let xL1 = minX * scale + margin;
+    let xR1 = maxX * scale - margin;
+    let yT1 = minY * scale + margin;
+    let yB1 = maxY * scale - margin;
 
-    const maxLoops = Math.floor(Math.min(maxX - minX, maxY - minY) / (2 * step));
+    let xL2 = xL1 + p;
+    let xR2 = xR1 - p;
+    let yT2 = yT1 + p;
+    let yB2 = yB1 - p;
 
-    for (let s = 0; s < maxLoops; s++) {
-      const d = inset + s * step;
-      const x1 = ((minX + d) * scale).toFixed(1);
-      const x2 = ((maxX - d) * scale).toFixed(1);
-      const y1 = ((minY + d) * scale).toFixed(1);
-      const y2 = ((maxY - d) * scale).toFixed(1);
+    const feed: Array<{ x: number; y: number }> = [];
+    const ret: Array<{ x: number; y: number }> = [];
 
-      if (parseFloat(x1) >= parseFloat(x2) || parseFloat(y1) >= parseFloat(y2)) break;
+    // 1. Kollektor (KL) shkafiga parallel ulanish (mutlaqo 0 kesishuv)
+    feed.push({ x: mX, y: yT1 });
 
-      if (s % 2 === 0) {
-        feedPts.push(`${x1},${y1} ${x2},${y1} ${x2},${y2} ${x1},${y2}`);
-      } else {
-        retPts.push(`${x1},${y1} ${x2},${y1} ${x2},${y2} ${x1},${y2}`);
-      }
+    ret.push({ x: mX, y: yT2 });
+
+    // 2. Parallel spiral qavatlari (0 kesishuv, 0 ustma-ust tushish)
+    while (xR2 - xL2 >= 2.5 * p && yB2 - yT2 >= 2.5 * p) {
+      feed.push({ x: xR1, y: yT1 });
+      ret.push({ x: xR2, y: yT2 });
+
+      feed.push({ x: xR1, y: yB1 });
+      ret.push({ x: xR2, y: yB2 });
+
+      // Bottom side: o'ngdan chapga to'liq devor bo'yigacha
+      feed.push({ x: xL1, y: yB1 });
+      ret.push({ x: xL2, y: yB2 });
+
+      // Left side: pastdan keyingi ichki qavat tepasigacha
+      feed.push({ x: xL1, y: yT1 + 2 * p });
+      ret.push({ x: xL2, y: yT2 + 2 * p });
+
+      xL1 += 2 * p;
+      xR1 -= 2 * p;
+      yT1 += 2 * p;
+      yB1 -= 2 * p;
+
+      xL2 += 2 * p;
+      xR2 -= 2 * p;
+      yT2 += 2 * p;
+      yB2 -= 2 * p;
     }
+
+    // 3. Markaziy 180° hairpin burilish (Feed -> Return)
+    const lastF = feed[feed.length - 1];
+    const lastR = ret[ret.length - 1];
+    feed.push({ x: lastF.x + p, y: lastF.y });
+    feed.push({ x: lastR.x, y: lastR.y });
+
+    // 4. Return quvurini teskari (outward) tartibda kollektorga qaytarish
+    const returnOutward = ret.reverse();
+
+    const feedPtsStr = feed.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+    const retPtsStr = returnOutward.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
 
     return [
       {
-        id: 'fallback_circuit_1',
-        feedPoints: feedPts.join(' '),
-        returnPoints: retPts.join(' '),
+        id: 'circuit_clean_bifilar_1',
+        feedPoints: feedPtsStr,
+        returnPoints: retPtsStr,
       }
     ];
-  }, [circuits, valid, scale]);
+  }, [valid, mX, mY, minX, maxX, minY, maxY, scale]);
 
   return (
     <G>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, StyleSheet, PanResponder, GestureResponderEvent, Dimensions, Text } from 'react-native';
-import Svg, { Defs, Pattern, Rect, Circle, Line, Polyline, Polygon, Text as SvgText, G } from 'react-native-svg';
+import Svg, { Defs, Pattern, Rect, Circle, Line, Polyline, Path, Text as SvgText, G } from 'react-native-svg';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { WallRenderer } from './WallRenderer';
@@ -671,8 +671,8 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
           <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomScale})`}>
             {/* 0. Xona Zamin Oq Foni (Har doim eng ostida) */}
             {!isDrawingWall && validRoomPoints.length >= 3 && (
-              <Polygon
-                points={validRoomPoints.map(p => `${p.x * scale},${p.y * scale}`).join(' ')}
+              <Path
+                d={`M ${validRoomPoints[0].x * scale} ${validRoomPoints[0].y * scale} ` + validRoomPoints.slice(1).map(p => `L ${p.x * scale} ${p.y * scale}`).join(' ') + ' Z'}
                 fill="#FFFFFF"
                 stroke="#CBD5E1"
                 strokeWidth="1"

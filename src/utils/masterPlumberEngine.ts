@@ -299,113 +299,82 @@ function generateInwardPolygonCoil(
   stepM: number,
   scalePx: number
 ): { feed: IPoint[]; ret: IPoint[]; lengthM: number } {
-  const toMM = 1000;
-  const basePoly = ensureClosed(polygonMeters).map(p => [p.x * toMM, p.y * toMM]);
-
-  const ringsPx: IPoint[][] = [];
-  let currentOffsetMM = 150; 
-  
-  while (ringsPx.length < 80) {
-    let result: any[] = [];
-    try {
-      result = new Offset().data(basePoly).padding(currentOffsetMM);
-    } catch (e) {
-      break;
-    }
-    
-    if (!result || result.length === 0) break;
-    
-    let largestIsland = result[0];
-    let maxArea = 0;
-    for (const island of result) {
-      const pts = island.map((p: any) => ({ x: p[0], y: p[1] }));
-      const a = calculatePolygonArea(pts);
-      if (a > maxArea) {
-        maxArea = a;
-        largestIsland = island;
-      }
-    }
-    
-    if (largestIsland.length < 3) break;
-    
-    const ringPx = largestIsland.map((p: any) => ({
-      x: parseFloat(((p[0] / toMM) * scalePx).toFixed(1)),
-      y: parseFloat(((p[1] / toMM) * scalePx).toFixed(1))
-    }));
-    
-    // Force Clockwise
-    let sum = 0;
-    for (let k = 0; k < ringPx.length; k++) {
-      const pA = ringPx[k];
-      const pB = ringPx[(k + 1) % ringPx.length];
-      sum += (pB.x - pA.x) * (pB.y + pA.y);
-    }
-    if (sum < 0) {
-      ringPx.reverse();
-    }
-    // Remove the duplicate closing point if it exists
-    const firstP = ringPx[0];
-    const lastP = ringPx[ringPx.length - 1];
-    if (Math.hypot(firstP.x - lastP.x, firstP.y - lastP.y) < 1.0) {
-      ringPx.pop();
-    }
-    ringsPx.push(ringPx);
-    
-    currentOffsetMM += stepM * 1000;
-  }
-
-  if (ringsPx.length === 0) {
-    return { feed: [], ret: [], lengthM: 0 };
-  }
-
-  // Find absolute Top-Left of the polygon for rock-solid alignment
-  let minX = Infinity, minY = Infinity;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of polygonMeters) {
     if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
-  }
-  // Align all rings to the physical Manifold position!
-  const refPointPx = [{ x: manifoldPos.x * scalePx, y: manifoldPos.y * scalePx }];
-
-  // Align ALL rings to the absolute Manifold position!
-  const alignedRings: IPoint[][] = [];
-  for (let i = 0; i < ringsPx.length; i++) {
-    alignedRings.push(alignRingToPoint(ringsPx[i], refPointPx[0]));
+    if (p.y > maxY) maxY = p.y;
   }
 
-  const geomFeed: IPoint[] = [];
-  const geomReturn: IPoint[] = [];
-  const N = alignedRings.length;
+  const margin = 0.28 * scalePx;
+  const p = 0.18 * scalePx; // 18sm quvur qadami
 
-  // Feed geometric path (0, 2, 4...)
-  for (let i = 0; i < N; i += 2) {
-    const ring = alignedRings[i];
-    for (let j = 0; j < ring.length; j++) {
-      geomFeed.push(ring[j]);
-    }
+  const mX = manifoldPos && Number.isFinite(manifoldPos.x)
+    ? manifoldPos.x * scalePx
+    : (minX + 0.35) * scalePx;
+  const mY = manifoldPos && Number.isFinite(manifoldPos.y)
+    ? manifoldPos.y * scalePx
+    : (minY + 0.35) * scalePx;
+
+  let xL1 = minX * scalePx + margin;
+  let xR1 = maxX * scalePx - margin;
+  let yT1 = minY * scalePx + margin;
+  let yB1 = maxY * scalePx - margin;
+
+  let xL2 = xL1 + p;
+  let xR2 = xR1 - p;
+  let yT2 = yT1 + p;
+  let yB2 = yB1 - p;
+
+  const feed: IPoint[] = [];
+  const ret: IPoint[] = [];
+
+  // 1. Kollektor (KL) shkafiga parallel ulanish (mutlaqo 0 kesishuv)
+  feed.push({ x: mX, y: yT1 });
+
+  ret.push({ x: mX, y: yT2 });
+
+  // 2. Parallel spiral qavatlari (Two-Lane Bifilar Spiral)
+  while (xR2 - xL2 >= 2.5 * p && yB2 - yT2 >= 2.5 * p) {
+    feed.push({ x: xR1, y: yT1 });
+    ret.push({ x: xR2, y: yT2 });
+
+    feed.push({ x: xR1, y: yB1 });
+    ret.push({ x: xR2, y: yB2 });
+
+    // Bottom side: o'ngdan chapga to'liq devor bo'yigacha
+    feed.push({ x: xL1, y: yB1 });
+    ret.push({ x: xL2, y: yB2 });
+
+    // Left side: pastdan keyingi ichki qavat tepasigacha
+    feed.push({ x: xL1, y: yT1 + 2 * p });
+    ret.push({ x: xL2, y: yT2 + 2 * p });
+
+    xL1 += 2 * p;
+    xR1 -= 2 * p;
+    yT1 += 2 * p;
+    yB1 -= 2 * p;
+
+    xL2 += 2 * p;
+    xR2 -= 2 * p;
+    yT2 += 2 * p;
+    yB2 -= 2 * p;
   }
 
-  // Return geometric path (1, 3, 5...)
-  for (let i = 1; i < N; i += 2) {
-    const ring = alignedRings[i];
-    for (let j = 0; j < ring.length; j++) {
-      geomReturn.push(ring[j]);
-    }
-  }
+  // 3. Markaziy 180° hairpin burilish (Feed -> Return)
+  const lastF = feed[feed.length - 1];
+  const lastR = ret[ret.length - 1];
+  feed.push({ x: lastF.x + p, y: lastF.y });
+  feed.push({ x: lastR.x, y: lastR.y });
 
-  // Connect at center and reverse return
-  const feed = [...geomFeed];
-  const ret = geomReturn.reverse();
-  
-  // Add center hairpin connection smoothly
-  if (feed.length > 0 && ret.length > 0) {
-    feed.push(ret[0]); // Connect to the start of reversed return
-  }
+  // 4. Return quvurini teskari (outward) tartibda kollektorga qaytarish (tugash nuqtasi)
+  const returnOutward = ret.reverse();
 
   const areaM2 = calculatePolygonArea(polygonMeters);
-  const lengthM = parseFloat((areaM2 / stepM).toFixed(1));
+  const lengthM = parseFloat((areaM2 / 0.18).toFixed(1));
 
-  return { feed, ret, lengthM };
+  return { feed, ret: returnOutward, lengthM };
 }
 
 /**
