@@ -1,6 +1,6 @@
-import React, { useMemo, Suspense, useState } from 'react';
+import React, { useMemo, Suspense, useState, useEffect } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { Canvas } from '@react-three/fiber/native';
+import { Canvas, useThree } from '@react-three/fiber/native';
 import { OrbitControls, Sky, ContactShadows } from '@react-three/drei/native';
 import { Maximize2, X, Box, Plus, Minus, RotateCcw } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,17 @@ interface RoomCanvas3DProps {
   sunAzimuth?: number;
   windAngle?: number;
 }
+
+// 0. Kamera Zoom Boshqaruvchisi (Direct Camera Position Update)
+const CameraController = ({ zoomLevel }: { zoomLevel: number }) => {
+  const { camera } = useThree();
+  useEffect(() => {
+    const basePos = new THREE.Vector3(0, 8, 10);
+    camera.position.copy(basePos.multiplyScalar(zoomLevel));
+    camera.updateProjectionMatrix();
+  }, [zoomLevel, camera]);
+  return null;
+};
 
 // 1. Zamin (Floor)
 const Floor = ({ roomPoints }: { roomPoints: any[] }) => {
@@ -95,12 +106,10 @@ const Doors3D = ({ doors, wallHeight }: { doors: any[]; wallHeight: number }) =>
         const height = door.height || wallHeight * 0.72;
         return (
           <group key={`door_${i}`} position={[door.position.x, height / 2, door.position.y]}>
-            {/* Eshik romi */}
             <mesh>
               <boxGeometry args={[width, height, 0.16]} />
               <meshStandardMaterial color="#523722" roughness={0.6} />
             </mesh>
-            {/* Eshik tutqichi */}
             <mesh position={[width / 2 - 0.1, 0, 0.1]}>
               <sphereGeometry args={[0.03, 12, 12]} />
               <meshStandardMaterial color="#E2E8F0" metalness={0.8} roughness={0.2} />
@@ -123,12 +132,10 @@ const Windows3D = ({ windows, wallHeight }: { windows: any[]; wallHeight: number
         const posY = win.elevationM || 1.0;
         return (
           <group key={`win_${i}`} position={[win.position.x, posY + height / 2, win.position.y]}>
-            {/* Oyna oq ramkasi */}
             <mesh>
               <boxGeometry args={[width, height, 0.18]} />
               <meshStandardMaterial color="#FFFFFF" roughness={0.3} />
             </mesh>
-            {/* Shaffof ko'k oyna mikromateriali */}
             <mesh position={[0, 0, 0]}>
               <boxGeometry args={[width - 0.1, height - 0.1, 0.04]} />
               <meshStandardMaterial color="#93C5FD" transparent opacity={0.45} roughness={0.1} />
@@ -140,7 +147,7 @@ const Windows3D = ({ windows, wallHeight }: { windows: any[]; wallHeight: number
   );
 };
 
-// 5. 3D Mebellar (Furniture: Bed, Sofa, Table, TV)
+// 5. 3D Mebellar (Furniture)
 const Furnitures3D = ({ items }: { items: any[] }) => {
   return (
     <>
@@ -153,17 +160,14 @@ const Furnitures3D = ({ items }: { items: any[] }) => {
         if (type === 'bed') {
           return (
             <group key={`furn_${i}`} position={[item.position.x, 0, item.position.y]}>
-              {/* Karavot yog'och korpusi */}
               <mesh position={[0, 0.2, 0]}>
                 <boxGeometry args={[w, 0.4, l]} />
                 <meshStandardMaterial color="#78350F" roughness={0.6} />
               </mesh>
-              {/* Matras */}
               <mesh position={[0, 0.45, 0]}>
                 <boxGeometry args={[w - 0.1, 0.2, l - 0.1]} />
                 <meshStandardMaterial color="#F8FAFC" roughness={0.8} />
               </mesh>
-              {/* Yostiq */}
               <mesh position={[0, 0.6, -l / 2 + 0.3]}>
                 <boxGeometry args={[w - 0.3, 0.1, 0.4]} />
                 <meshStandardMaterial color="#E2E8F0" roughness={0.9} />
@@ -175,12 +179,10 @@ const Furnitures3D = ({ items }: { items: any[] }) => {
         if (type === 'sofa') {
           return (
             <group key={`furn_${i}`} position={[item.position.x, 0, item.position.y]}>
-              {/* Divan o'rindigi */}
               <mesh position={[0, 0.25, 0]}>
                 <boxGeometry args={[w, 0.4, l]} />
                 <meshStandardMaterial color="#334155" roughness={0.7} />
               </mesh>
-              {/* Divan suyanchig'i */}
               <mesh position={[-w / 2 + 0.15, 0.6, 0]}>
                 <boxGeometry args={[0.3, 0.7, l]} />
                 <meshStandardMaterial color="#1E293B" roughness={0.7} />
@@ -216,17 +218,14 @@ const Boiler3D = ({ boilerPos, roomPoints }: { boilerPos?: any; roomPoints: any[
 
   return (
     <group position={pos as [number, number, number]}>
-      {/* Devorga ilingan Gaz Qozon (Kotyol) */}
       <mesh castShadow>
         <boxGeometry args={[0.45, 0.75, 0.32]} />
         <meshStandardMaterial color="#F8FAFC" roughness={0.2} metalness={0.1} />
       </mesh>
-      {/* Displeyi */}
       <mesh position={[0, 0.1, 0.165]}>
         <boxGeometry args={[0.2, 0.12, 0.01]} />
         <meshBasicMaterial color="#0284C7" />
       </mesh>
-      {/* Pastki Suv Quvurlari */}
       <mesh position={[-0.1, -0.45, 0]}>
         <cylinderGeometry args={[0.018, 0.018, 0.2, 12]} />
         <meshStandardMaterial color="#EF4444" roughness={0.3} />
@@ -269,7 +268,7 @@ const Manifold3D = ({ manifoldPos, roomPoints }: { manifoldPos?: any; roomPoints
   );
 };
 
-// 8. 3D Split Konditsioner (2D dagi o'rniga 100% bir xil sinxronlashtirildi)
+// 8. 3D Professional CFD Sovutish Simulyatsiyasi (Super Light & Elegant Vector Airflow)
 const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; roomPoints: any[]; wallHeight: number }) => {
   const pos = useMemo(() => {
     let targetX = 1.2;
@@ -277,7 +276,7 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
 
     if (acPos && Number.isFinite(acPos.x) && Number.isFinite(acPos.y)) {
       targetX = acPos.x;
-      targetY = acPos.y;
+      targetY = acPos.y + 0.35;
     } else if (roomPoints.length >= 2) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity;
       roomPoints.forEach(p => {
@@ -286,50 +285,119 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
         if (p.y < minY) minY = p.y;
       });
       targetX = (minX + maxX) / 2;
-      targetY = minY + 0.35;
+      targetY = minY + 0.52; // Devor qalinligi (0.38m) ustiga o'tib, xona ichki devorida 100% toza ko'rinadi
     }
 
     return [targetX, wallHeight - 0.45, targetY];
   }, [acPos, roomPoints, wallHeight]);
 
+  // Pol ustidagi 2D/3D Sinxron Aerodinamik Havo Qamrovi Sektori (Sector Shape)
+  const outerSectorShape = useMemo(() => {
+    const s = new THREE.Shape();
+    const radius = 3.2; // 3.2 metr qamrov masofasi
+    const angleStart = -Math.PI / 6; // -30°
+    const angleEnd = Math.PI / 6;    // +30°
+
+    s.moveTo(0, 0);
+    const steps = 24;
+    for (let i = 0; i <= steps; i++) {
+      const a = angleStart + (angleEnd - angleStart) * (i / steps);
+      s.lineTo(Math.sin(a) * radius, Math.cos(a) * radius);
+    }
+    s.lineTo(0, 0);
+    return s;
+  }, []);
+
+  const innerSectorShape = useMemo(() => {
+    const s = new THREE.Shape();
+    const radius = 1.4; // 1.4 metr sovuq core masofasi
+    const angleStart = -Math.PI / 7;
+    const angleEnd = Math.PI / 7;
+
+    s.moveTo(0, 0);
+    const steps = 16;
+    for (let i = 0; i <= steps; i++) {
+      const a = angleStart + (angleEnd - angleStart) * (i / steps);
+      s.lineTo(Math.sin(a) * radius, Math.cos(a) * radius);
+    }
+    s.lineTo(0, 0);
+    return s;
+  }, []);
+
+  // 5 ta Ingichka Vektor Nurlari (CFD Air Streamlines)
+  const streamlines = useMemo(() => {
+    const lines = [];
+    const numRays = 5;
+    const dropY = wallHeight - 0.5;
+    
+    for (let i = 0; i < numRays; i++) {
+      const angle = (-Math.PI / 6) + (Math.PI / 3) * (i / (numRays - 1));
+      const endX = Math.sin(angle) * 3.0;
+      const endZ = Math.cos(angle) * 3.0;
+
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 0, 0.1),
+        new THREE.Vector3(endX * 0.4, -dropY * 0.5, endZ * 0.4),
+        new THREE.Vector3(endX, -dropY + 0.05, endZ)
+      ]);
+      lines.push(curve);
+    }
+    return lines;
+  }, [wallHeight]);
+
   return (
     <group position={pos as [number, number, number]}>
-      {/* 3D Split Konditsioner Asosiy Korpusi (Tashqi Ramkali) */}
+      {/* 1. Split Konditsioner Sleek Korpusi */}
       <mesh castShadow>
-        <boxGeometry args={[1.2, 0.38, 0.3]} />
-        <meshStandardMaterial color="#0F172A" roughness={0.3} />
+        <boxGeometry args={[1.15, 0.35, 0.26]} />
+        <meshStandardMaterial color="#CBD5E1" roughness={0.3} />
       </mesh>
 
       {/* Oq mat korpus */}
       <mesh position={[0, 0, 0.02]}>
-        <boxGeometry args={[1.14, 0.34, 0.28]} />
+        <boxGeometry args={[1.1, 0.31, 0.24]} />
         <meshStandardMaterial color="#F8FAFC" roughness={0.2} metalness={0.1} />
       </mesh>
 
-      {/* Jonli Ko'k Displey va Indikator */}
-      <mesh position={[0.32, 0.02, 0.165]}>
-        <boxGeometry args={[0.18, 0.09, 0.01]} />
+      {/* Displeyi */}
+      <mesh position={[0.3, 0.02, 0.142]}>
+        <boxGeometry args={[0.16, 0.08, 0.01]} />
         <meshBasicMaterial color="#0284C7" />
       </mesh>
 
-      {/* Jalyuzi Havo Tarqatgichi */}
-      <mesh position={[0, -0.16, 0.08]} rotation={[0.4, 0, 0]}>
-        <boxGeometry args={[1.0, 0.04, 0.14]} />
+      {/* Jalyuzi Havo Panjarasi */}
+      <mesh position={[0, -0.14, 0.06]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[0.95, 0.03, 0.12]} />
         <meshStandardMaterial color="#334155" roughness={0.5} />
       </mesh>
 
-      {/* Aerodinamik Yozgi Sovuq Havo Oqimi (3D Ko'k Nurli Havo Oqimi) */}
-      <group position={[0, -0.9, 0.4]} rotation={[0.4, 0, 0]}>
-        <mesh>
-          <coneGeometry args={[0.75, 1.8, 16, 1, false]} />
-          <meshStandardMaterial color="#0284C7" transparent opacity={0.35} roughness={0.1} side={THREE.DoubleSide} />
+      {/* 2. Ince va Nafis CFD Vektor Havo Oqimlari (5 ta Nur) */}
+      {streamlines.map((curve, idx) => (
+        <mesh key={`stream_${idx}`}>
+          <tubeGeometry args={[curve, 32, 0.012, 6, false]} />
+          <meshBasicMaterial color="#38BDF8" transparent opacity={0.45} />
+        </mesh>
+      ))}
+
+      {/* 3. POL USTIDAGI SOVUTISh QAMROV SEKTORI (Xona Ichiga Qaratilgan Sleek Fan Sector) */}
+      <group position={[0, -(wallHeight - 0.47), 0.1]} rotation={[Math.PI / 2, 0, 0]}>
+        {/* Tashqi Yumshoq Qamrov Maydoni (+22°C Comfort Zone) */}
+        <mesh position={[0, 0, 0.01]}>
+          <shapeGeometry args={[outerSectorShape]} />
+          <meshBasicMaterial color="#38BDF8" transparent opacity={0.18} side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Ichki Eng Sovuq Core Zone (+18°C Cold Core) */}
+        <mesh position={[0, 0, 0.02]}>
+          <shapeGeometry args={[innerSectorShape]} />
+          <meshBasicMaterial color="#0284C7" transparent opacity={0.32} side={THREE.DoubleSide} />
         </mesh>
       </group>
     </group>
   );
 };
 
-// 9. 3D Tyoply Pol Quvurlari (Zero Crash Guaranteed)
+// 9. 3D Tyoply Pol Quvurlari
 const Pipes3D = ({ circuits, roomPoints }: { circuits: any[]; roomPoints: any[] }) => {
   const pipeCurves = useMemo(() => {
     const curves: { pts: THREE.Vector3[]; isFeed: boolean }[] = [];
@@ -345,7 +413,6 @@ const Pipes3D = ({ circuits, roomPoints }: { circuits: any[]; roomPoints: any[] 
         return new THREE.Vector3(x, 0.06, y);
       }).filter(Boolean) as THREE.Vector3[];
 
-      // Bir xil nuqtalarni va o'ta yaqin nuqtalarni tozalash (Zero CatmullRom Crash)
       const cleanPts: THREE.Vector3[] = [];
       for (let i = 0; i < raw.length; i++) {
         if (i === 0) {
@@ -371,7 +438,6 @@ const Pipes3D = ({ circuits, roomPoints }: { circuits: any[]; roomPoints: any[] 
       });
     }
 
-    // Fallback: Agar circuits bo'sh bo'lsa, xona ichida toza 3D quvurlarni avtomatik chizish
     if (curves.length === 0 && roomPoints.length >= 3) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       roomPoints.forEach(p => {
@@ -424,7 +490,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
   wallHeightM = 3.0,
 }) => {
   const insets = useSafeAreaInsets();
-  const [fov, setFov] = useState<number>(45);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
 
   const {
     roomPoints,
@@ -478,9 +544,9 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     return { x: cx / validPoints.length, y: cy / validPoints.length };
   }, [validPoints]);
 
-  const handleZoomIn = () => setFov(prev => Math.max(15, prev - 10));
-  const handleZoomOut = () => setFov(prev => Math.min(85, prev + 10));
-  const handleResetZoom = () => setFov(45);
+  const handleZoomIn = () => setZoomLevel(prev => Math.max(0.3, parseFloat((prev - 0.25).toFixed(2))));
+  const handleZoomOut = () => setZoomLevel(prev => Math.min(2.5, parseFloat((prev + 0.25).toFixed(2))));
+  const handleResetZoom = () => setZoomLevel(1.0);
 
   if (validPoints.length < 3) {
     return (
@@ -513,7 +579,8 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
       )}
 
       {/* WebGL 3D Canvas */}
-      <Canvas shadows={false} camera={{ position: [0, 8, 10], fov: fov, near: 0.1, far: 150 }}>
+      <Canvas shadows={false} camera={{ position: [0, 8, 10], fov: 45, near: 0.1, far: 200 }}>
+        <CameraController zoomLevel={zoomLevel} />
         <Suspense fallback={null}>
           <Sky sunPosition={[10, 20, 10]} />
           <ambientLight intensity={0.85} />
@@ -535,7 +602,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
               </>
             )}
 
-            {/* Yozgi Rejimda: 3D Split Konditsioner va Aerodinamik Sovuq Havo Oqimi */}
+            {/* Yozgi Rejimda: Professional CFD Vektor Havo Oqimi Simulyatsiyasi */}
             {seasonMode === 'summer' && (
               <AirConditioner3D acPos={acPosition} roomPoints={validPoints} wallHeight={wallHeightM} />
             )}
@@ -545,8 +612,8 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
           <OrbitControls
             makeDefault
             target={[0, 0, 0]}
-            minDistance={1.0}
-            maxDistance={60}
+            minDistance={0.5}
+            maxDistance={80}
             minPolarAngle={0.05}
             maxPolarAngle={Math.PI / 2 - 0.02}
             touches={{
@@ -575,7 +642,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
         <View style={styles.overlayRow}>
           <View style={styles.overlayBadge}>
             <Text style={styles.overlayText}>
-              {seasonMode === 'winter' ? '🔥 3D Tyoply Pol & Kotyol' : '❄️ 3D HVAC Konditsioner'}
+              {seasonMode === 'winter' ? '🔥 3D Tyoply Pol & Kotyol' : '❄️ 3D HVAC Sovutish Simulyatsiyasi'}
             </Text>
           </View>
 

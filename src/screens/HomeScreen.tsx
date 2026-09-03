@@ -194,35 +194,14 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             </LinearGradient>
             <Text style={styles.emptyTitle}>Loyihalar yo‘q</Text>
             <Text style={styles.emptyDesc}>
-              Bitta tugma orqali yangi xonani yoki uyni noldan loyihalang:
+              Bitta tugma orqali yangi xona yoki uyni noldan loyihalang:
             </Text>
 
-            <View style={styles.quickPresetsRow}>
-              <TouchableOpacity
-                style={styles.presetCard}
-                onPress={() => handleCreateProject('🏡 Kottej (Zal + Yotoqxona)', 'private_house')}
-                activeOpacity={0.8}
-              >
-                <Home size={22} color={COLORS.primary} />
-                <Text style={styles.presetTitle}>Hovli / Kottej</Text>
-                <Text style={styles.presetSub}>Katta maydon, Kotyol</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.presetCard}
-                onPress={() => handleCreateProject('🏢 Kvartira (Mehmonxona)', 'apartment')}
-                activeOpacity={0.8}
-              >
-                <Building size={22} color={COLORS.cool} />
-                <Text style={styles.presetTitle}>Kvartira</Text>
-                <Text style={styles.presetSub}>Kollektor & Radiator</Text>
-              </TouchableOpacity>
-            </View>
-
             <CustomButton
-              title="+ Maxsus Yangi Loyiha"
+              title="+ Yangi Loyiha Yaratish"
               onPress={() => setModalVisible(true)}
-              style={{ marginTop: 18, width: '100%' }}
+              style={{ marginTop: 24, width: '100%' }}
+              icon={<Plus size={18} color={COLORS.surface} />}
             />
           </View>
         }

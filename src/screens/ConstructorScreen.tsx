@@ -156,42 +156,59 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   const recommendedAcInfo = useMemo(() => {
     const area = roomArea || 0;
-    if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.' };
-    
-    let btu = 9000;
-    let modelName = '09 model (9 000 BTU / 2.6 kW)';
-    let count = 1;
-    let desc = "Kichik va o'rtacha xonalar uchun yetarli";
+    const height = currentProject?.defaultCeilingHeight || 3.0;
+    const volume = Math.round(area * height);
+    const windowCount = (windows || []).length;
+    const isSunny = currentProject?.compassNorthAngle === 0 || currentProject?.compassNorthAngle === 45;
 
-    if (area <= 22) {
-      btu = 9000;
+    if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.', countText: '0 dona', totalKw: '0 kW', placementNote: 'Xonani chizing', heatGainDesc: 'Deraza va maydon aniqlanmagan' };
+
+    // Boshlang'ich hajm bo'yicha issiqlik quvvati (40 W/m³)
+    let baseWatts = volume * 40;
+    // Har bir deraza uchun +350W issiqlik kirishi
+    const windowBonus = windowCount * 350;
+    // Quyoshli xona uchun +15% issiqlik
+    const solarFactor = isSunny ? 1.15 : 1.0;
+    
+    const totalWatts = Math.round((baseWatts + windowBonus) * solarFactor);
+    const totalKw = (totalWatts / 1000).toFixed(1);
+    const totalBtu = Math.round(totalWatts * 3.412);
+
+    let modelName = '09 model (9 000 BTU / 2.6 kW)';
+    let countText = '1 dona split-sistema';
+    let desc = `${area} m² xona (${volume} m³ hajm) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz xona"} uchun optimal quvvat`;
+
+    if (totalWatts <= 2800) {
       modelName = '09 model (9 000 BTU / 2.6 kW)';
-      count = 1;
-      desc = "22 m² gacha bo'lgan yotoqxona va kichik xonalar uchun ideal";
-    } else if (area <= 35) {
-      btu = 12000;
+      countText = '1 dona split-sistema';
+    } else if (totalWatts <= 4000) {
       modelName = '12 model (12 000 BTU / 3.5 kW)';
-      count = 1;
-      desc = "25-35 m² mehmonxona va zal uchun optimal sovitish quvvati";
-    } else if (area <= 55) {
-      btu = 18000;
-      modelName = '18 model (18 000 BTU / 5.2 kW)';
-      count = 1;
-      desc = "35-55 m² katta xonalar uchun yoki 2 dona 09 model tavsiya etiladi";
-    } else if (area <= 75) {
-      btu = 24000;
-      modelName = '24 model (24 000 BTU / 7.0 kW)';
-      count = 1;
-      desc = "55-75 m² keng zallar uchun yoki 2 dona 12 model tavsiya etiladi";
+      countText = '1 dona split-sistema';
+    } else if (totalWatts <= 6500) {
+      if (area > 40) {
+        modelName = '2 dona 09 model (18 000 BTU jami)';
+        countText = '2 dona split-sistema (muvozanatli sovitish)';
+      } else {
+        modelName = '18 model (18 000 BTU / 5.2 kW)';
+        countText = '1 dona split-sistema';
+      }
+    } else if (totalWatts <= 9000) {
+      modelName = '2 dona 12 model (24 000 BTU jami)';
+      countText = '2 dona split-sistema (xona bo‘ylab teng sovitish)';
     } else {
-      btu = 36000;
-      count = Math.ceil(area / 35);
-      modelName = `${count} dona Multisplit (har biri 18-24 model)`;
-      desc = `${area} m² katta maydon uchun ${count} ta nuqtadan muvozanatli sovitish lozim`;
+      const units = Math.ceil(totalWatts / 3500);
+      modelName = `${units} dona 12/18 model (Multisplit)`;
+      countText = `${units} dona split-sistema`;
     }
 
-    return { btu, modelName, count, desc };
-  }, [roomArea]);
+    const placementNote = windowCount > 0 
+      ? `Deraza (Oyna) yonidagi tashqi devorga (oynadan kiruvchi ${windowCount * 350}W issiqlikni birinchi bo'lib to'sadi)`
+      : `Xonaning eng uzun devori markaziga shiftdan 20 sm pastda o'rnatish`;
+
+    const heatGainDesc = `${windowCount > 0 ? `${windowCount} ta deraza va ` : ''}${volume} m³ hajm uchun issiqlik yuklamasi: ${totalKw} kW (${totalBtu.toLocaleString()} BTU/h)`;
+
+    return { modelName, countText, desc, totalKw, totalBtu, placementNote, heatGainDesc, windowCount, volume };
+  }, [roomArea, windows, currentProject?.defaultCeilingHeight, currentProject?.compassNorthAngle]);
 
   const handleAutoPlaceAc = () => {
     const pts = roomPoints && roomPoints.length >= 3 ? roomPoints : ROOM_PRESETS.RECTANGLE(6.0, 4.0);
@@ -379,21 +396,23 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
             <View style={styles.acRulesGrid}>
               <View style={styles.acRuleItem}>
-                <MapPin size={14} color={COLORS.cool} />
+                <Layers size={14} color={COLORS.cool} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Joylashuvi:</Text> Deraza yonidagi tashqi devorga
+                  <Text style={styles.bold}>Tavsiya etilgan soni:</Text> {recommendedAcInfo.countText}
                 </Text>
               </View>
+
               <View style={styles.acRuleItem}>
-                <ShieldCheck size={14} color={COLORS.success} />
+                <Flame size={14} color={COLORS.heat} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Salomatlik:</Text> Divandan 1.5m uzoqroqda
+                  <Text style={styles.bold}>Issiqlik yuklamasi:</Text> {recommendedAcInfo.heatGainDesc}
                 </Text>
               </View>
+
               <View style={styles.acRuleItem}>
-                <Wind size={14} color={COLORS.primaryLight} />
+                <MapPin size={14} color={COLORS.primaryLight} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Havo oqimi:</Text> Shiftdan 20 sm pastda
+                  <Text style={styles.bold}>Joylashuv sababi:</Text> {recommendedAcInfo.placementNote}
                 </Text>
               </View>
             </View>
@@ -515,11 +534,7 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               <Text style={styles.sumVal}>{roomPoints?.length || 0} ta</Text>
             </View>
           </View>
-        </View>
-
-        <EngineeringAdvisorCard />
-
-        <View style={styles.standardsRow}>
+        </View>        <View style={styles.standardsRow}>
           <View style={styles.stdBadge}>
             <ShieldCheck size={14} color={COLORS.success} />
             <Text style={styles.stdText}>KMK 2.04.05-97</Text>
