@@ -1,5 +1,5 @@
 import React, { useMemo, Suspense, useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, PanResponder } from 'react-native';
 import { Canvas, useThree, useFrame } from '@react-three/fiber/native';
 import { OrbitControls, Sky, ContactShadows } from '@react-three/drei/native';
 
@@ -584,6 +584,67 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     }
   };
 
+  const panResponder3D = useMemo(() => {
+    let lastPinchDist = 0;
+    let lastTouch = { x: 0, y: 0 };
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const touches = evt.nativeEvent.touches;
+        if (touches && touches.length >= 2) {
+          lastPinchDist = Math.hypot(touches[1].pageX - touches[0].pageX, touches[1].pageY - touches[0].pageY);
+        } else if (touches && touches.length === 1) {
+          lastTouch = { x: touches[0].pageX, y: touches[0].pageY };
+        }
+      },
+      onPanResponderMove: (evt) => {
+        const touches = evt.nativeEvent.touches;
+        if (!orbitRef.current) return;
+
+        if (touches && touches.length >= 2) {
+          // 2-BARMOQ PINCH ZOOM (Yaqinlashganda -> YAQINLASHISH, Uzoqlashganda -> UZOQLASHISH)
+          const currentDist = Math.hypot(touches[1].pageX - touches[0].pageX, touches[1].pageY - touches[0].pageY);
+          if (lastPinchDist > 0) {
+            const distDelta = currentDist - lastPinchDist;
+            if (distDelta < -1.5) {
+              if (typeof orbitRef.current.dollyIn === 'function') {
+                orbitRef.current.dollyIn(1.025);
+                orbitRef.current.update();
+              }
+            } else if (distDelta > 1.5) {
+              if (typeof orbitRef.current.dollyOut === 'function') {
+                orbitRef.current.dollyOut(1.025);
+                orbitRef.current.update();
+              }
+            }
+          }
+          lastPinchDist = currentDist;
+        } else if (touches && touches.length === 1) {
+          // 1-BARMOQ 360° SPHERICAL AYLANISH (Sof Three.js Spherical Orbit)
+          const dx = touches[0].pageX - lastTouch.x;
+          const dy = touches[0].pageY - lastTouch.y;
+          lastTouch = { x: touches[0].pageX, y: touches[0].pageY };
+
+          const camera = orbitRef.current.object;
+          if (camera) {
+            const spherical = new THREE.Spherical().setFromVector3(camera.position);
+            spherical.theta -= (2 * Math.PI * dx) / 500;
+            spherical.phi -= (2 * Math.PI * dy) / 500;
+            spherical.phi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, spherical.phi));
+            camera.position.setFromSpherical(spherical);
+            camera.lookAt(0, 0, 0);
+            orbitRef.current.update();
+          }
+        }
+      },
+      onPanResponderRelease: () => {
+        lastPinchDist = 0;
+      },
+    });
+  }, []);
+
   if (validPoints.length < 3) {
     return (
       <View style={[isFullscreen ? styles.fullscreenContainer : styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -595,7 +656,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
   }
 
   return (
-    <View style={isFullscreen ? styles.fullscreenContainer : styles.container}>
+    <View style={isFullscreen ? styles.fullscreenContainer : styles.container} {...panResponder3D.panHandlers}>
       {/* Fullscreen Header / Controls */}
       {isFullscreen && (
         <View style={[styles.fullscreenHeader, { paddingTop: insets.top || 16 }]} pointerEvents="box-none">
