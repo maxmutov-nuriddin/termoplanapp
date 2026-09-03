@@ -677,3 +677,138 @@ export function snapPointToOrthoAndParallel(
     isOrtho: snapped,
   };
 }
+
+export interface IAcPlacement {
+  x: number;
+  y: number;
+  targetAngle: number;
+  label?: string;
+}
+
+export function calculateAcCountAndPositions(
+  roomPoints: IPoint[],
+  roomArea: number,
+  ceilingHeight: number = 3.0,
+  windowsCount: number = 0,
+  isSunny: boolean = false
+): { count: number; modelName: string; totalKw: string; totalBtu: number; positions: IAcPlacement[] } {
+  const valid = (roomPoints || []).filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (valid.length < 3) {
+    return {
+      count: 0,
+      modelName: 'Hali chizilmadi',
+      totalKw: '0.0',
+      totalBtu: 0,
+      positions: []
+    };
+  }
+
+  let area = roomArea || 0;
+  if (area === 0) {
+    let areaSum = 0;
+    for (let i = 0; i < valid.length; i++) {
+      const j = (i + 1) % valid.length;
+      areaSum += valid[i].x * valid[j].y;
+      areaSum -= valid[j].x * valid[i].y;
+    }
+    area = Math.round(Math.abs(areaSum) / 2);
+  }
+
+  const height = ceilingHeight || 3.0;
+  const volume = Math.round(area * height);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  valid.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+
+  const baseWatts = volume * 40;
+  const windowBonus = windowsCount * 350;
+  const solarFactor = isSunny ? 1.15 : 1.0;
+  const totalWatts = Math.round((baseWatts + windowBonus) * solarFactor);
+  const totalKw = (totalWatts / 1000).toFixed(1);
+  const totalBtu = Math.round(totalWatts * 3.412);
+
+  let count = 1;
+  let modelName = '09 model (9 000 BTU / 2.6 kW)';
+
+  if (totalWatts <= 2800) {
+    count = 1;
+    modelName = '09 model (9 000 BTU / 2.6 kW)';
+  } else if (totalWatts <= 4000) {
+    count = 1;
+    modelName = '12 model (12 000 BTU / 3.5 kW)';
+  } else if (totalWatts <= 6500) {
+    if (area > 40) {
+      count = 2;
+      modelName = '2 dona 09 model (18 000 BTU jami)';
+    } else {
+      count = 1;
+      modelName = '18 model (18 000 BTU / 5.2 kW)';
+    }
+  } else if (totalWatts <= 9000) {
+    count = 2;
+    modelName = '2 dona 12 model (24 000 BTU jami)';
+  } else if (totalWatts <= 13000) {
+    count = 3;
+    modelName = '3 dona 12/18 model (Multisplit)';
+  } else if (totalWatts <= 18000) {
+    count = 4;
+    modelName = '4 dona 12/18 model (Multisplit)';
+  } else {
+    count = Math.min(8, Math.ceil(totalWatts / 3500));
+    modelName = `${count} dona 12/18 model (Multisplit)`;
+  }
+
+  const positions: IAcPlacement[] = [];
+  const roomW = maxX - minX;
+
+  if (count === 1) {
+    positions.push({
+      x: minX + roomW / 2,
+      y: minY + 0.35,
+      targetAngle: 90,
+      label: 'AC 1'
+    });
+  } else if (count === 2) {
+    positions.push({
+      x: minX + roomW / 2,
+      y: minY + 0.35,
+      targetAngle: 90,
+      label: 'AC 1'
+    });
+    positions.push({
+      x: minX + roomW / 2,
+      y: maxY - 0.35,
+      targetAngle: 270,
+      label: 'AC 2'
+    });
+  } else {
+    const topCount = Math.ceil(count / 2);
+    const bottomCount = Math.floor(count / 2);
+
+    for (let i = 0; i < topCount; i++) {
+      const step = roomW / (topCount + 1);
+      positions.push({
+        x: minX + step * (i + 1),
+        y: minY + 0.35,
+        targetAngle: 90,
+        label: `AC ${i + 1}`
+      });
+    }
+
+    for (let i = 0; i < bottomCount; i++) {
+      const step = roomW / (bottomCount + 1);
+      positions.push({
+        x: minX + step * (i + 1),
+        y: maxY - 0.35,
+        targetAngle: 270,
+        label: `AC ${topCount + i + 1}`
+      });
+    }
+  }
+
+  return { count, modelName, totalKw, totalBtu, positions };
+}

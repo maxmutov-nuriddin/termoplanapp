@@ -16,6 +16,7 @@ import {
   findNearestWallSnap,
   findNearestVertexOrWallSnap,
   snapWallOrthoAngle,
+  calculateAcCountAndPositions,
 } from '../../utils/geometry';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -702,26 +703,25 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
               />
             )}
 
-            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && !useCanvasStore.getState().acPosition && validRoomPoints.length >= 3 && (() => {
-              let targetX = 1.2, targetY = 0.5;
-              if (validRoomPoints.length >= 2) {
-                let minX = Infinity, maxX = -Infinity, minY = Infinity;
-                validRoomPoints.forEach(p => {
-                  if (p.x < minX) minX = p.x;
-                  if (p.x > maxX) maxX = p.x;
-                  if (p.y < minY) minY = p.y;
-                });
-                targetX = (minX + maxX) / 2;
-                targetY = minY + 0.2;
-              }
+            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (() => {
+              const windows = useCanvasStore.getState().windows || [];
+              const acCalc = calculateAcCountAndPositions(validRoomPoints, roomArea || 0, 3.0, windows.length, isSunnyRoom);
+              const listToRender = (acCalc.positions && acCalc.positions.length > 0)
+                ? acCalc.positions
+                : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
               return (
-                <AirflowConeRenderer
-                  roomWidthM={roomArea ? Math.sqrt(roomArea) * 1.3 : 6.5}
-                  roomHeightM={roomArea ? Math.sqrt(roomArea) * 1.3 : 5.0}
-                  acPos={{ x: targetX, y: targetY, targetAngle: 90 }}
-                  furniture={useCanvasStore.getState().furniture || []}
-                  recommendedBtu={recommendedBtu}
-                />
+                <>
+                  {listToRender.map((pos, idx) => (
+                    <AirflowConeRenderer
+                      key={`ac_render_${idx}`}
+                      roomWidthM={roomArea ? Math.sqrt(roomArea) * 1.3 : 6.5}
+                      roomHeightM={roomArea ? Math.sqrt(roomArea) * 1.3 : 5.0}
+                      acPos={pos}
+                      furniture={useCanvasStore.getState().furniture || []}
+                      recommendedBtu={recommendedBtu}
+                    />
+                  ))}
+                </>
               );
             })()}
 

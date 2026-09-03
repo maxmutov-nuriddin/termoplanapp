@@ -79,14 +79,6 @@ export const DraggableElementsRenderer: React.FC<{ readOnly?: boolean }> = ({ re
         padding={0}
       />
 
-      {acPosition && (
-        <AirflowConeRenderer
-          roomWidthM={6.5}
-          roomHeightM={5.0}
-          acPos={acPosition}
-          furniture={furniture || []}
-        />
-      )}
 
       {manifoldPosition && (
         <G transform={`translate(${manifoldPosition.x * scale - 18}, ${manifoldPosition.y * scale - 15})`}>

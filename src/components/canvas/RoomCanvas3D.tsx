@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as THREE from 'three';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
-import { PIXELS_PER_METER, generateRealisticFloorHeating } from '../../utils/geometry';
+import { PIXELS_PER_METER, generateRealisticFloorHeating, calculateAcCountAndPositions } from '../../utils/geometry';
 import { COLORS, RADIUS, SHADOWS } from '../../theme';
 
 interface RoomCanvas3DProps {
@@ -270,13 +270,15 @@ const Manifold3D = ({ manifoldPos, roomPoints }: { manifoldPos?: any; roomPoints
 
 // 8. 3D Professional CFD Sovutish Simulyatsiyasi (Super Light & Elegant Vector Airflow)
 const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; roomPoints: any[]; wallHeight: number }) => {
-  const pos = useMemo(() => {
+  const { pos, rotY } = useMemo(() => {
     let targetX = 1.2;
     let targetY = 0.5;
+    let angle = 90;
 
     if (acPos && Number.isFinite(acPos.x) && Number.isFinite(acPos.y)) {
       targetX = acPos.x;
-      targetY = acPos.y + 0.35;
+      targetY = acPos.y;
+      angle = acPos.targetAngle || 90;
     } else if (roomPoints.length >= 2) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity;
       roomPoints.forEach(p => {
@@ -285,10 +287,20 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
         if (p.y < minY) minY = p.y;
       });
       targetX = (minX + maxX) / 2;
-      targetY = minY + 0.52; // Devor qalinligi (0.38m) ustiga o'tib, xona ichki devorida 100% toza ko'rinadi
+      targetY = minY + 0.35;
     }
 
-    return [targetX, wallHeight - 0.45, targetY];
+    let offsetY = 0.20;
+    if (angle === 270) {
+      offsetY = -0.20;
+    }
+
+    const rot = angle === 270 ? Math.PI : 0;
+
+    return {
+      pos: [targetX, wallHeight - 0.45, targetY + offsetY],
+      rotY: rot
+    };
   }, [acPos, roomPoints, wallHeight]);
 
   // Pol ustidagi 2D/3D Sinxron Aerodinamik Havo Qamrovi Sektori (Sector Shape)
@@ -346,7 +358,7 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
   }, [wallHeight]);
 
   return (
-    <group position={pos as [number, number, number]}>
+    <group position={pos as [number, number, number]} rotation={[0, rotY, 0]}>
       {/* 1. Split Konditsioner Sleek Korpusi */}
       <mesh castShadow>
         <boxGeometry args={[1.15, 0.35, 0.26]} />
@@ -602,10 +614,18 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
               </>
             )}
 
-            {/* Yozgi Rejimda: Professional CFD Vektor Havo Oqimi Simulyatsiyasi */}
-            {seasonMode === 'summer' && (
-              <AirConditioner3D acPos={acPosition} roomPoints={validPoints} wallHeight={wallHeightM} />
-            )}
+            {/* Yozgi Rejimda: Professional CFD Vektor Havo Oqimi Simulyatsiyasi (Barcha Konditsionerlar) */}
+            {seasonMode === 'summer' && (() => {
+              const acPositions3D = calculateAcCountAndPositions(validPoints, 0, wallHeightM, windows ? windows.length : 0, false).positions;
+              const list3D = (acPositions3D && acPositions3D.length > 0) ? acPositions3D : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
+              return (
+                <>
+                  {list3D.map((pos, idx) => (
+                    <AirConditioner3D key={`ac3d_${idx}`} acPos={pos} roomPoints={validPoints} wallHeight={wallHeightM} />
+                  ))}
+                </>
+              );
+            })()}
           </group>
 
           <ContactShadows position={[0, -0.05, 0]} opacity={0.4} scale={20} blur={1.5} far={3} />

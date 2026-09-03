@@ -33,7 +33,7 @@ import { LoadingModal } from '../components/common/LoadingModal';
 import { useCanvasStore } from '../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useProjectStore } from '../store/projectStore';
-import { ROOM_PRESETS } from '../utils/geometry';
+import { ROOM_PRESETS, calculateAcCountAndPositions } from '../utils/geometry';
 import { analyzeRoomHeatingPattern } from '../utils/hvacAdvisor';
 import { calculateMasterPlumberPlan } from '../utils/masterPlumberEngine';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
@@ -157,71 +157,32 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const recommendedAcInfo = useMemo(() => {
     const area = roomArea || 0;
     const height = currentProject?.defaultCeilingHeight || 3.0;
-    const volume = Math.round(area * height);
     const windowCount = (windows || []).length;
     const isSunny = currentProject?.compassNorthAngle === 0 || currentProject?.compassNorthAngle === 45;
+    const volume = Math.round(area * height);
 
-    if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.', countText: '0 dona', totalKw: '0 kW', placementNote: 'Xonani chizing', heatGainDesc: 'Deraza va maydon aniqlanmagan' };
+    if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.', countText: '0 dona', totalKw: '0 kW', placementNote: 'Xonani chizing', heatGainDesc: 'Deraza va maydon aniqlanmagan', positions: [] };
 
-    // Boshlang'ich hajm bo'yicha issiqlik quvvati (40 W/m³)
-    let baseWatts = volume * 40;
-    // Har bir deraza uchun +350W issiqlik kirishi
-    const windowBonus = windowCount * 350;
-    // Quyoshli xona uchun +15% issiqlik
-    const solarFactor = isSunny ? 1.15 : 1.0;
+    const acCalc = calculateAcCountAndPositions(roomPoints || [], area, height, windowCount, isSunny);
     
-    const totalWatts = Math.round((baseWatts + windowBonus) * solarFactor);
-    const totalKw = (totalWatts / 1000).toFixed(1);
-    const totalBtu = Math.round(totalWatts * 3.412);
-
-    let modelName = '09 model (9 000 BTU / 2.6 kW)';
-    let countText = '1 dona split-sistema';
-    let desc = `${area} m² xona (${volume} m³ hajm) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz xona"} uchun optimal quvvat`;
-
-    if (totalWatts <= 2800) {
-      modelName = '09 model (9 000 BTU / 2.6 kW)';
-      countText = '1 dona split-sistema';
-    } else if (totalWatts <= 4000) {
-      modelName = '12 model (12 000 BTU / 3.5 kW)';
-      countText = '1 dona split-sistema';
-    } else if (totalWatts <= 6500) {
-      if (area > 40) {
-        modelName = '2 dona 09 model (18 000 BTU jami)';
-        countText = '2 dona split-sistema (muvozanatli sovitish)';
-      } else {
-        modelName = '18 model (18 000 BTU / 5.2 kW)';
-        countText = '1 dona split-sistema';
-      }
-    } else if (totalWatts <= 9000) {
-      modelName = '2 dona 12 model (24 000 BTU jami)';
-      countText = '2 dona split-sistema (xona bo‘ylab teng sovitish)';
-    } else {
-      const units = Math.ceil(totalWatts / 3500);
-      modelName = `${units} dona 12/18 model (Multisplit)`;
-      countText = `${units} dona split-sistema`;
-    }
-
+    const countText = `${acCalc.count} dona split-sistema${acCalc.count > 1 ? ' (xona bo‘ylab muvozanatli joylashuv)' : ''}`;
+    const desc = `${area} m² xona (${volume} m³ hajm) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz xona"} uchun optimal quvvat`;
     const placementNote = windowCount > 0 
-      ? `Deraza (Oyna) yonidagi tashqi devorga (oynadan kiruvchi ${windowCount * 350}W issiqlikni birinchi bo'lib to'sadi)`
-      : `Xonaning eng uzun devori markaziga shiftdan 20 sm pastda o'rnatish`;
+      ? `Deraza (Oyna) yonidagi tashqi devorlarga (oynadan kiruvchi ${windowCount * 350}W issiqlikni birinchi bo'lib to'sadi)`
+      : `Xonaning uzoq devorlari markazlariga shiftdan 20 sm pastda o'rnatish`;
+    const heatGainDesc = `${volume} m³ hajm uchun issiqlik yuklamasi: ${acCalc.totalKw} kW (${acCalc.totalBtu.toLocaleString()} BTU/h)`;
 
-    const heatGainDesc = `${windowCount > 0 ? `${windowCount} ta deraza va ` : ''}${volume} m³ hajm uchun issiqlik yuklamasi: ${totalKw} kW (${totalBtu.toLocaleString()} BTU/h)`;
-
-    return { modelName, countText, desc, totalKw, totalBtu, placementNote, heatGainDesc, windowCount, volume };
-  }, [roomArea, windows, currentProject?.defaultCeilingHeight, currentProject?.compassNorthAngle]);
+    return { modelName: acCalc.modelName, countText, desc, totalKw: acCalc.totalKw, totalBtu: acCalc.totalBtu, placementNote, heatGainDesc, count: acCalc.count, positions: acCalc.positions };
+  }, [roomArea, roomPoints, windows, currentProject?.defaultCeilingHeight, currentProject?.compassNorthAngle]);
 
   const handleAutoPlaceAc = () => {
-    const pts = roomPoints && roomPoints.length >= 3 ? roomPoints : ROOM_PRESETS.RECTANGLE(6.0, 4.0);
-    let optX = pts[0].x + 1.2;
-    let optY = pts[0].y;
-
-    if (windows && windows.length > 0) {
-      const w = windows[0];
-      optX = w.position.x + 0.8;
-      optY = w.position.y;
-    }
-
-    updateElementPosition('ac', 'ac', optX, optY);
+    const count = recommendedAcInfo.count || 1;
+    // Yagona qo'lda surilgan holatni tozlab, avtomatik ko'p konditsionerli (Multisplit) rejimni to'liq faollashtirish
+    useCanvasStore.setState({ acPosition: null });
+    Alert.alert(
+      '🎯 Tavsiya O‘rnatildi',
+      `${count} dona split-sistema (${recommendedAcInfo.modelName}) xona bo‘ylab muvozanatli joylashuv o‘rnatildi.`
+    );
   };
 
   useEffect(() => {
@@ -398,21 +359,24 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               <View style={styles.acRuleItem}>
                 <Layers size={14} color={COLORS.cool} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Tavsiya etilgan soni:</Text> {recommendedAcInfo.countText}
+                  <Text style={styles.bold}>Tavsiya etilgan soni: </Text>
+                  {String(recommendedAcInfo.countText || '')}
                 </Text>
               </View>
 
               <View style={styles.acRuleItem}>
                 <Flame size={14} color={COLORS.heat} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Issiqlik yuklamasi:</Text> {recommendedAcInfo.heatGainDesc}
+                  <Text style={styles.bold}>Issiqlik yuklamasi: </Text>
+                  {String(recommendedAcInfo.heatGainDesc || '')}
                 </Text>
               </View>
 
               <View style={styles.acRuleItem}>
                 <MapPin size={14} color={COLORS.primaryLight} />
                 <Text style={styles.acRuleText}>
-                  <Text style={styles.bold}>Joylashuv sababi:</Text> {recommendedAcInfo.placementNote}
+                  <Text style={styles.bold}>Joylashuv sababi: </Text>
+                  {String(recommendedAcInfo.placementNote || '')}
                 </Text>
               </View>
             </View>
@@ -534,7 +498,9 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               <Text style={styles.sumVal}>{roomPoints?.length || 0} ta</Text>
             </View>
           </View>
-        </View>        <View style={styles.standardsRow}>
+        </View>
+
+        <View style={styles.standardsRow}>
           <View style={styles.stdBadge}>
             <ShieldCheck size={14} color={COLORS.success} />
             <Text style={styles.stdText}>KMK 2.04.05-97</Text>

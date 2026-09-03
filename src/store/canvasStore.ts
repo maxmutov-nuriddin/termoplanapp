@@ -100,6 +100,7 @@ interface CanvasState {
   // Actions
   setSeasonMode: (mode: SeasonMode) => void;
   setSelectedTool: (tool: CanvasTool) => void;
+  setToolMode: (tool: any) => void;
   setShowDimensions: (show: boolean) => void;
   toggleShowDimensions: () => void;
   toggleLayoutLock: () => void;
@@ -367,6 +368,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setHeatingPattern: (pattern) => {
     get().pushHistorySnapshot();
     set({ heatingPattern: pattern });
+  },
+  setToolMode: (tool: any) => {
+    get().setSelectedTool(tool);
   },
   setSelectedTool: (tool) => {
     if (tool === 'pen_wall') {
