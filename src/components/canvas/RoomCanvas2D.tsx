@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { View, StyleSheet, PanResponder, GestureResponderEvent, Dimensions, Text } from 'react-native';
-import Svg, { Defs, Pattern, Rect, Circle, Line, Polyline, Text as SvgText, G } from 'react-native-svg';
+import Svg, { Defs, Pattern, Rect, Circle, Line, Polyline, Polygon, Text as SvgText, G } from 'react-native-svg';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { WallRenderer } from './WallRenderer';
@@ -92,6 +92,12 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
     activeGuidelines,
     isOrthoSnapped,
     showDimensions,
+    manifoldPosition,
+    boilerPosition,
+    furniture,
+    doors,
+    windows,
+    heatingExcludedZones,
   } = useCanvasStore(useShallow(s => ({
     roomArea: s.roomArea,
     seasonMode: s.seasonMode,
@@ -111,6 +117,12 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
     activeGuidelines: s.activeGuidelines,
     isOrthoSnapped: s.isOrthoSnapped,
     showDimensions: s.showDimensions,
+    manifoldPosition: s.manifoldPosition,
+    boilerPosition: s.boilerPosition,
+    furniture: s.furniture,
+    doors: s.doors,
+    windows: s.windows,
+    heatingExcludedZones: s.heatingExcludedZones,
   })));
 
   const {
@@ -657,13 +669,41 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
 
           {/* Butun Loyiha Fazosi */}
           <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomScale})`}>
-            {/* 1. Xona Devorlari va Pol Poligoni */}
+            {/* 0. Xona Zamin Oq Foni (Har doim eng ostida) */}
+            {!isDrawingWall && validRoomPoints.length >= 3 && (
+              <Polygon
+                points={validRoomPoints.map(p => `${p.x * scale},${p.y * scale}`).join(' ')}
+                fill="#FFFFFF"
+                stroke="#CBD5E1"
+                strokeWidth="1"
+                strokeLinejoin="round"
+              />
+            )}
+
+            {/* 1. Tyoply Pol Isitish Quvurlari (Zamin ustida, devorlar ostida) */}
+            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'winter' && validRoomPoints.length >= 3 && (
+              <HeatingPipeRenderer
+                roomPoints={validRoomPoints}
+                manifoldPos={manifoldPosition || { x: 0.8, y: 0.8 }}
+                boilerPos={boilerPosition}
+                interiorWalls={interiorWalls || []}
+                doors={doors || []}
+                windows={windows || []}
+                furniture={furniture || []}
+                excludedZones={heatingExcludedZones || []}
+                isSunny={isSunnyRoom}
+                padding={0}
+              />
+            )}
+
+            {/* 2. Xona Devorlari va Pol Poligoni */}
             {!isDrawingWall && validRoomPoints.length >= 3 ? (
               <WallRenderer
                 points={validRoomPoints}
                 walls={walls || []}
                 selectedWallIndex={readOnly ? null : selectedWallIndex}
                 showDimensions={showDimensions}
+                hideFloorFill={true}
                 padding={0}
                 onSelectWall={(idx) => {
                   if (readOnly) return;
@@ -673,7 +713,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
               />
             ) : null}
 
-            {/* 1.5. Ichki Devorlar (Peregorodkalar) */}
+            {/* 2.5. Ichki Devorlar (Peregorodkalar) */}
             {!isDrawingWall && (
               <InteriorWallRenderer
                 interiorWalls={interiorWalls || []}
@@ -689,19 +729,8 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
               />
             )}
 
-            {/* 2. Eshiklar, Oynalar, Mebellar va Uskunalar */}
+            {/* 3. Eshiklar, Oynalar, Mebellar va Uskunalar */}
             {!isDrawingWall && <DraggableElementsRenderer readOnly={readOnly} />}
-
-            {/* 4. Quvurlar va Konditsioner */}
-            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'winter' && validRoomPoints.length >= 3 && (
-              <HeatingPipeRenderer
-                roomPoints={validRoomPoints}
-                manifoldPos={useCanvasStore.getState().manifoldPosition || { x: 0.8, y: 0.8 }}
-                interiorWalls={interiorWalls || []}
-                isSunny={isSunnyRoom}
-                padding={0}
-              />
-            )}
 
             {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (() => {
               const windows = useCanvasStore.getState().windows || [];
@@ -719,6 +748,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
                       acPos={pos}
                       furniture={useCanvasStore.getState().furniture || []}
                       recommendedBtu={recommendedBtu}
+                      showDimensions={showDimensions}
                     />
                   ))}
                 </>

@@ -121,6 +121,52 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
   const mX = (manifoldPos?.x || 1.0) * scale + padding;
   const mY = (manifoldPos?.y || 1.0) * scale + padding;
 
+  const renderedCircuits = useMemo(() => {
+    const hasValid = (circuits || []).some(c => c && (c.feedPoints || c.returnPoints));
+    if (hasValid) return circuits;
+
+    if (valid.length < 3) return [];
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    valid.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    });
+
+    const inset = 0.28;
+    const step = 0.20;
+    const feedPts: string[] = [];
+    const retPts: string[] = [];
+
+    const maxLoops = Math.floor(Math.min(maxX - minX, maxY - minY) / (2 * step));
+
+    for (let s = 0; s < maxLoops; s++) {
+      const d = inset + s * step;
+      const x1 = ((minX + d) * scale).toFixed(1);
+      const x2 = ((maxX - d) * scale).toFixed(1);
+      const y1 = ((minY + d) * scale).toFixed(1);
+      const y2 = ((maxY - d) * scale).toFixed(1);
+
+      if (parseFloat(x1) >= parseFloat(x2) || parseFloat(y1) >= parseFloat(y2)) break;
+
+      if (s % 2 === 0) {
+        feedPts.push(`${x1},${y1} ${x2},${y1} ${x2},${y2} ${x1},${y2}`);
+      } else {
+        retPts.push(`${x1},${y1} ${x2},${y1} ${x2},${y2} ${x1},${y2}`);
+      }
+    }
+
+    return [
+      {
+        id: 'fallback_circuit_1',
+        feedPoints: feedPts.join(' '),
+        returnPoints: retPts.join(' '),
+      }
+    ];
+  }, [circuits, valid, scale]);
+
   return (
     <G>
       <G transform={`translate(${padding}, ${padding})`}>
@@ -150,7 +196,7 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
 
         {/* 2. XONALAR ICHIDAGI KONTURLAR */}
         <G>
-          {circuits.map((circuit, idx) => {
+          {renderedCircuits.map((circuit, idx) => {
             const feedPath = parsePointsStringToSmoothPath(circuit.feedPoints, 7);
             const returnPath = parsePointsStringToSmoothPath(circuit.returnPoints, 7);
 

@@ -7,6 +7,7 @@ interface WindowDoorRendererProps {
   windows: IWindow[];
   doors: IDoor[];
   selectedId?: string | null;
+  showDimensions?: boolean;
   padding?: number;
 }
 
@@ -14,6 +15,7 @@ const WindowDoorRendererComponent: React.FC<WindowDoorRendererProps> = ({
   windows,
   doors,
   selectedId,
+  showDimensions = true,
   padding = 0,
 }) => {
   const scale = PIXELS_PER_METER;
@@ -87,26 +89,28 @@ const WindowDoorRendererComponent: React.FC<WindowDoorRendererProps> = ({
             <Line x1={halfW} y1={-6} x2={halfW} y2={6} stroke="#0F172A" strokeWidth="2.5" strokeLinecap="square" />
 
             {/* Oyna o'lchami yozuvi (Har doim o'ng tomoni tepaga qarab turadi) */}
-            <G transform={`translate(0, -14) rotate(${badgeRot})`}>
-              <Rect
-                x={-24}
-                y={-8}
-                width={48}
-                height={13}
-                fill="#0284C7"
-                rx={3}
-              />
-              <SvgText
-                x={0}
-                y={1.5}
-                fill="#FFFFFF"
-                fontSize={7.5}
-                fontWeight="bold"
-                textAnchor="middle"
-              >
-                {`🪟 ${Number(win.width || 1.4).toFixed(2)}m`}
-              </SvgText>
-            </G>
+            {showDimensions && (
+              <G transform={`translate(0, -14) rotate(${badgeRot})`}>
+                <Rect
+                  x={-24}
+                  y={-8}
+                  width={48}
+                  height={13}
+                  fill="#0284C7"
+                  rx={3}
+                />
+                <SvgText
+                  x={0}
+                  y={1.5}
+                  fill="#FFFFFF"
+                  fontSize={7.5}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  {`🪟 ${Number(win.width || 1.4).toFixed(2)}m`}
+                </SvgText>
+              </G>
+            )}
           </G>
         );
       })}
@@ -212,26 +216,28 @@ const WindowDoorRendererComponent: React.FC<WindowDoorRendererProps> = ({
             <Circle cx={hingeX} cy={0} r={2.5} fill="#15803D" />
 
             {/* Eshik razmeri va yo'nalishi yozuvi (Har doim o'ng tomoni tepada turadi) */}
-            <G transform={`translate(0, ${ySign * (wPx / 2 + 10)}) rotate(${badgeRot})`}>
-              <Rect
-                x={-30}
-                y={-7}
-                width={60}
-                height={13}
-                fill="#16A34A"
-                rx={3}
-              />
-              <SvgText
-                x={0}
-                y={2.5}
-                fill="#FFFFFF"
-                fontSize={7}
-                fontWeight="bold"
-                textAnchor="middle"
-              >
-                {`🚪 ${Number(door.width || 0.9).toFixed(2)}m ${isInside ? '↓Ich' : '↑Tash'}`}
-              </SvgText>
-            </G>
+            {showDimensions && (
+              <G transform={`translate(0, ${ySign * (wPx / 2 + 10)}) rotate(${badgeRot})`}>
+                <Rect
+                  x={-30}
+                  y={-7}
+                  width={60}
+                  height={13}
+                  fill="#16A34A"
+                  rx={3}
+                />
+                <SvgText
+                  x={0}
+                  y={2.5}
+                  fill="#FFFFFF"
+                  fontSize={7}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  {`🚪 ${Number(door.width || 0.9).toFixed(2)}m ${isInside ? '↓Ich' : '↑Tash'}`}
+                </SvgText>
+              </G>
+            )}
           </G>
         );
       })}

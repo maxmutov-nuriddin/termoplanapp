@@ -18,6 +18,7 @@ export const DraggableElementsRenderer: React.FC<{ readOnly?: boolean }> = ({ re
     acPosition,
     heatingExcludedZones,
     selectedElementId,
+    showDimensions,
   } = useCanvasStore(
     useShallow((s) => ({
       windows: s.windows,
@@ -28,6 +29,7 @@ export const DraggableElementsRenderer: React.FC<{ readOnly?: boolean }> = ({ re
       acPosition: s.acPosition,
       heatingExcludedZones: s.heatingExcludedZones,
       selectedElementId: s.selectedElementId,
+      showDimensions: s.showDimensions,
     }))
   );
 
@@ -76,6 +78,7 @@ export const DraggableElementsRenderer: React.FC<{ readOnly?: boolean }> = ({ re
         windows={windows || []}
         doors={doors || []}
         selectedId={readOnly ? null : selectedElementId}
+        showDimensions={showDimensions}
         padding={0}
       />
 

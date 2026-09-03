@@ -9,6 +9,7 @@ interface AirflowConeRendererProps {
   acPos: { x: number; y: number; targetAngle: number };
   furniture: IFurniture[];
   recommendedBtu?: number;
+  showDimensions?: boolean;
   padding?: number;
 }
 
@@ -18,6 +19,7 @@ const AirflowConeRendererComponent: React.FC<AirflowConeRendererProps> = ({
   acPos,
   furniture,
   recommendedBtu = 12000,
+  showDimensions = true,
   padding = 0,
 }) => {
   const scale = PIXELS_PER_METER;
@@ -58,12 +60,14 @@ const AirflowConeRendererComponent: React.FC<AirflowConeRendererProps> = ({
       <Polygon points={conePoints} fill="url(#acAirGradient)" />
 
       {/* Konditsioner Bloki (Sleek AC Badge) */}
-      <G transform={`translate(${originX - 22}, ${originY + badgeOffsetY})`}>
-        <Rect x="0" y="0" width="44" height="14" fill="#0F172A" rx="4" stroke="#38BDF8" strokeWidth="1.2" opacity="0.92" />
-        <SvgText x="22" y="10" fill="#38BDF8" fontSize="8" fontWeight="800" textAnchor="middle">
-          {btuText}
-        </SvgText>
-      </G>
+      {showDimensions && (
+        <G transform={`translate(${originX - 22}, ${originY + badgeOffsetY})`}>
+          <Rect x="0" y="0" width="44" height="14" fill="#0F172A" rx="4" stroke="#38BDF8" strokeWidth="1.2" opacity="0.92" />
+          <SvgText x="22" y="10" fill="#38BDF8" fontSize="8" fontWeight="800" textAnchor="middle">
+            {btuText}
+          </SvgText>
+        </G>
+      )}
     </G>
   );
 };

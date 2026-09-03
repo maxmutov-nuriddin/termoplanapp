@@ -8,6 +8,7 @@ interface WallRendererProps {
   walls?: IWall[];
   selectedWallIndex?: number | null;
   showDimensions?: boolean;
+  hideFloorFill?: boolean;
   padding?: number;
   onSelectWall?: (index: number) => void;
 }
@@ -17,6 +18,7 @@ const WallRendererComponent: React.FC<WallRendererProps> = ({
   walls = [],
   selectedWallIndex,
   showDimensions = true,
+  hideFloorFill = false,
   padding = 0,
 }) => {
   const scale = PIXELS_PER_METER;
@@ -35,13 +37,15 @@ const WallRendererComponent: React.FC<WallRendererProps> = ({
   return (
     <G>
       {/* 1. Xona ichki pol qatlami */}
-      <Polygon
-        points={polyPointsStr}
-        fill="#FFFFFF"
-        stroke="#CBD5E1"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
+      {!hideFloorFill && (
+        <Polygon
+          points={polyPointsStr}
+          fill="#FFFFFF"
+          stroke="#CBD5E1"
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
+      )}
 
       {/* 2. Devor chiziqlari va o'lchamlar */}
       {validPoints.map((p1, i) => {
