@@ -211,10 +211,10 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
   };
 
   const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
+    onStartShouldSetPanResponder: () => !readOnlyRef.current,
+    onStartShouldSetPanResponderCapture: () => !readOnlyRef.current,
+    onMoveShouldSetPanResponder: () => !readOnlyRef.current,
+    onMoveShouldSetPanResponderCapture: () => !readOnlyRef.current,
     onPanResponderTerminationRequest: () => false,
     onShouldBlockNativeResponder: () => true,
     onPanResponderGrant: (evt: GestureResponderEvent) => {

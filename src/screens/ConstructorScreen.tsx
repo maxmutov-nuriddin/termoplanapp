@@ -277,15 +277,7 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               onPress={() => setDimensionMode('2D')}
             >
               <Layers size={14} color={dimensionMode === '2D' ? COLORS.primary : COLORS.textSecondary} />
-              <Text style={[styles.dimBtnText, dimensionMode === '2D' && styles.dimBtnTextActive]}>2D</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.dimBtn, dimensionMode === '3D' && styles.dimBtnActive]}
-              onPress={() => setDimensionMode('3D')}
-            >
-              <Box size={14} color={dimensionMode === '3D' ? COLORS.primary : COLORS.textSecondary} />
-              <Text style={[styles.dimBtnText, dimensionMode === '3D' && styles.dimBtnTextActive]}>3D Fazo</Text>
+              <Text style={[styles.dimBtnText, dimensionMode === '2D' && styles.dimBtnTextActive]}>2D Sxema</Text>
             </TouchableOpacity>
 
             {dimensionMode === '2D' && (
@@ -320,18 +312,21 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
         <View style={styles.canvasWrapper}>
           {isFocused && (
-            dimensionMode === '2D' ? (
+            <View style={{ width: '100%', height: 320, position: 'relative' }}>
               <RoomCanvas2D
                 readOnly={true}
                 showPipesAndAirflow={true}
                 isSunnyRoom={currentProject?.compassNorthAngle === 0 || currentProject?.compassNorthAngle === 45}
               />
-            ) : (
-              <RoomCanvas3D
-                wallHeightM={currentProject?.defaultCeilingHeight || 3.0}
-                onToggleFullscreen={() => setIs3DFullscreen(true)}
-              />
-            )
+              <TouchableOpacity
+                style={styles.floatingCorner3dBtn}
+                onPress={() => setIs3DFullscreen(true)}
+                activeOpacity={0.85}
+              >
+                <Box size={14} color={COLORS.surface} />
+                <Text style={styles.floatingCorner3dBtnText}>🧊 3D Fazoda ko‘rish</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -911,5 +906,45 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+  },
+  floatingCorner3dBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.pill,
+    gap: 6,
+    ...SHADOWS.card,
+    elevation: 5,
+    zIndex: 25,
+  },
+  floatingCorner3dBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.surface,
+  },
+  floatingCorner2dBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.text,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.pill,
+    gap: 6,
+    ...SHADOWS.card,
+    elevation: 5,
+    zIndex: 25,
+  },
+  floatingCorner2dBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.surface,
   },
 });
