@@ -39,12 +39,17 @@ const AirflowConeRendererComponent: React.FC<AirflowConeRendererProps> = ({
 
   const conePoints = `${p1} ${p2} ${p3} ${p4}`;
 
+  const isBottom = acPos.targetAngle === 270;
+  const badgeOffsetY = isBottom ? -22 : 12;
+
+  const btuText = recommendedBtu ? `${Math.round(recommendedBtu / 1000)}K BTU` : 'AC';
+
   return (
     <G>
       <Defs>
         <LinearGradient id="acAirGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#38BDF8" stopOpacity="0.65" />
-          <Stop offset="50%" stopColor="#0284C7" stopOpacity="0.25" />
+          <Stop offset="0%" stopColor="#38BDF8" stopOpacity="0.55" />
+          <Stop offset="50%" stopColor="#0284C7" stopOpacity="0.2" />
           <Stop offset="100%" stopColor="#0284C7" stopOpacity="0.0" />
         </LinearGradient>
       </Defs>
@@ -52,12 +57,11 @@ const AirflowConeRendererComponent: React.FC<AirflowConeRendererProps> = ({
       {/* 2D Aerodinamik Sovuq Havo Konusi */}
       <Polygon points={conePoints} fill="url(#acAirGradient)" />
 
-      {/* Konditsioner Ichki Bloki (AC Indoor Unit) */}
-      <G transform={`translate(${originX - 18}, ${originY - 6})`}>
-        <Rect x="0" y="0" width="36" height="12" fill="#0284C7" rx="3" stroke="#FFFFFF" strokeWidth="1.2" />
-        <Rect x="3" y="8" width="30" height="2" fill="#FFFFFF" rx="1" />
-        <SvgText x="18" y="7" fill="#FFFFFF" fontSize="6" fontWeight="bold" textAnchor="middle">
-          AC {recommendedBtu ? `${recommendedBtu} BTU` : ''}
+      {/* Konditsioner Bloki (Sleek AC Badge) */}
+      <G transform={`translate(${originX - 22}, ${originY + badgeOffsetY})`}>
+        <Rect x="0" y="0" width="44" height="14" fill="#0F172A" rx="4" stroke="#38BDF8" strokeWidth="1.2" opacity="0.92" />
+        <SvgText x="22" y="10" fill="#38BDF8" fontSize="8" fontWeight="800" textAnchor="middle">
+          {btuText}
         </SvgText>
       </G>
     </G>

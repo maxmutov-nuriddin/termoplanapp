@@ -774,15 +774,15 @@ export function calculateAcCountAndPositions(
     });
   } else if (count === 2) {
     positions.push({
-      x: minX + roomW / 2,
+      x: minX + roomW * 0.28,
       y: minY + 0.35,
       targetAngle: 90,
       label: 'AC 1'
     });
     positions.push({
-      x: minX + roomW / 2,
-      y: maxY - 0.35,
-      targetAngle: 270,
+      x: minX + roomW * 0.72,
+      y: minY + 0.35,
+      targetAngle: 90,
       label: 'AC 2'
     });
   } else {
