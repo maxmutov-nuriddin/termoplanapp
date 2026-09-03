@@ -1,7 +1,16 @@
-import React, { useMemo, Suspense, useState, useEffect } from 'react';
+import React, { useMemo, Suspense, useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { Canvas, useThree } from '@react-three/fiber/native';
+import { Canvas, useThree, useFrame } from '@react-three/fiber/native';
 import { OrbitControls, Sky, ContactShadows } from '@react-three/drei/native';
+
+const OrbitUpdater = ({ orbitRef }: { orbitRef: any }) => {
+  useFrame(() => {
+    if (orbitRef.current) {
+      orbitRef.current.update();
+    }
+  });
+  return null;
+};
 import { Maximize2, X, Box, Plus, Minus, RotateCcw } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as THREE from 'three';
@@ -20,16 +29,7 @@ interface RoomCanvas3DProps {
   windAngle?: number;
 }
 
-// 0. Kamera Zoom Boshqaruvchisi (Direct Camera Position Update)
-const CameraController = ({ zoomLevel }: { zoomLevel: number }) => {
-  const { camera } = useThree();
-  useEffect(() => {
-    const basePos = new THREE.Vector3(0, 8, 10);
-    camera.position.copy(basePos.multiplyScalar(zoomLevel));
-    camera.updateProjectionMatrix();
-  }, [zoomLevel, camera]);
-  return null;
-};
+
 
 // 1. Zamin (Floor)
 const Floor = ({ roomPoints }: { roomPoints: any[] }) => {
@@ -556,9 +556,33 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     return { x: cx / validPoints.length, y: cy / validPoints.length };
   }, [validPoints]);
 
-  const handleZoomIn = () => setZoomLevel(prev => Math.max(0.3, parseFloat((prev - 0.25).toFixed(2))));
-  const handleZoomOut = () => setZoomLevel(prev => Math.min(2.5, parseFloat((prev + 0.25).toFixed(2))));
-  const handleResetZoom = () => setZoomLevel(1.0);
+  const orbitRef = useRef<any>(null);
+
+  const acPositions3D = useMemo(() => {
+    if (validPoints.length < 3) return [{ x: 1.2, y: 0.5, targetAngle: 90 }];
+    const res = calculateAcCountAndPositions(validPoints, 0, wallHeightM, windows ? windows.length : 0, false);
+    return (res.positions && res.positions.length > 0) ? res.positions : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
+  }, [validPoints, wallHeightM, windows?.length]);
+
+  const handleZoomIn = () => {
+    if (orbitRef.current) {
+      orbitRef.current.dollyIn(1.25);
+      orbitRef.current.update();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (orbitRef.current) {
+      orbitRef.current.dollyOut(1.25);
+      orbitRef.current.update();
+    }
+  };
+
+  const handleResetZoom = () => {
+    if (orbitRef.current) {
+      orbitRef.current.reset();
+    }
+  };
 
   if (validPoints.length < 3) {
     return (
@@ -574,7 +598,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     <View style={isFullscreen ? styles.fullscreenContainer : styles.container}>
       {/* Fullscreen Header / Controls */}
       {isFullscreen && (
-        <View style={[styles.fullscreenHeader, { paddingTop: insets.top || 16 }]}>
+        <View style={[styles.fullscreenHeader, { paddingTop: insets.top || 16 }]} pointerEvents="box-none">
           <View style={styles.fsHeaderLeft}>
             <Box size={20} color={COLORS.primaryLight} />
             <View>
@@ -592,11 +616,11 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
 
       {/* WebGL 3D Canvas */}
       <Canvas shadows={false} camera={{ position: [0, 8, 10], fov: 45, near: 0.1, far: 200 }}>
-        <CameraController zoomLevel={zoomLevel} />
+        <OrbitUpdater orbitRef={orbitRef} />
         <Suspense fallback={null}>
           <Sky sunPosition={[10, 20, 10]} />
-          <ambientLight intensity={0.85} />
-          <directionalLight position={[5, 12, 5]} intensity={1.4} />
+          <ambientLight intensity={0.9} />
+          <directionalLight position={[5, 12, 5]} intensity={1.5} />
           
           <group position={[-centroid.x, 0, -centroid.y]}>
             <Floor roomPoints={validPoints} />
@@ -615,37 +639,39 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
             )}
 
             {/* Yozgi Rejimda: Professional CFD Vektor Havo Oqimi Simulyatsiyasi (Barcha Konditsionerlar) */}
-            {seasonMode === 'summer' && (() => {
-              const acPositions3D = calculateAcCountAndPositions(validPoints, 0, wallHeightM, windows ? windows.length : 0, false).positions;
-              const list3D = (acPositions3D && acPositions3D.length > 0) ? acPositions3D : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
-              return (
-                <>
-                  {list3D.map((pos, idx) => (
-                    <AirConditioner3D key={`ac3d_${idx}`} acPos={pos} roomPoints={validPoints} wallHeight={wallHeightM} />
-                  ))}
-                </>
-              );
-            })()}
+            {seasonMode === 'summer' && (
+              <>
+                {acPositions3D.map((pos, idx) => (
+                  <AirConditioner3D key={`ac3d_${idx}`} acPos={pos} roomPoints={validPoints} wallHeight={wallHeightM} />
+                ))}
+              </>
+            )}
           </group>
 
-          <ContactShadows position={[0, -0.05, 0]} opacity={0.4} scale={20} blur={1.5} far={3} />
           <OrbitControls
+            ref={orbitRef}
             makeDefault
             target={[0, 0, 0]}
-            minDistance={0.5}
-            maxDistance={80}
+            enablePan={false}
+            enableZoom={true}
+            enableRotate={true}
+            enableDamping={false}
+            rotateSpeed={0.85}
+            zoomSpeed={0.85}
+            minDistance={1.5}
+            maxDistance={50}
             minPolarAngle={0.05}
             maxPolarAngle={Math.PI / 2 - 0.02}
             touches={{
               ONE: THREE.TOUCH.ROTATE,
-              TWO: THREE.TOUCH.DOLLY_PAN,
+              TWO: THREE.TOUCH.DOLLY,
             }}
           />
         </Suspense>
       </Canvas>
 
       {/* Interaktiv Zoom Tugmalari (+ / - / Reset) */}
-      <View style={styles.zoomControlBar}>
+      <View style={styles.zoomControlBar} pointerEvents="box-none">
         <TouchableOpacity style={styles.zoomBtn} onPress={handleZoomIn} activeOpacity={0.8}>
           <Plus size={16} color={COLORS.surface} />
         </TouchableOpacity>
