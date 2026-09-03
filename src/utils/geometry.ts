@@ -736,30 +736,30 @@ export function calculateAcCountAndPositions(
 
   if (totalWatts <= 2800) {
     count = 1;
-    modelName = '09 model (9 000 BTU / 2.6 kW)';
+    modelName = '1 dona 09-Model (9 000 BTU / 2.6 kW)';
   } else if (totalWatts <= 4000) {
     count = 1;
-    modelName = '12 model (12 000 BTU / 3.5 kW)';
+    modelName = '1 dona 12-Model (12 000 BTU / 3.5 kW)';
   } else if (totalWatts <= 6500) {
     if (area > 40) {
       count = 2;
-      modelName = '2 dona 09 model (18 000 BTU jami)';
+      modelName = '2 dona 09-Model (har biri 9 000 BTU)';
     } else {
       count = 1;
-      modelName = '18 model (18 000 BTU / 5.2 kW)';
+      modelName = '1 dona 18-Model (18 000 BTU / 5.2 kW)';
     }
   } else if (totalWatts <= 9000) {
     count = 2;
-    modelName = '2 dona 12 model (24 000 BTU jami)';
+    modelName = '2 dona 12-Model (har biri 12 000 BTU)';
   } else if (totalWatts <= 13000) {
     count = 3;
-    modelName = '3 dona 12/18 model (Multisplit)';
+    modelName = '1 dona 18-Model + 2 dona 12-Model (42 000 BTU jami)';
   } else if (totalWatts <= 18000) {
     count = 4;
-    modelName = '4 dona 12/18 model (Multisplit)';
+    modelName = '2 dona 18-Model + 2 dona 12-Model (60 000 BTU jami)';
   } else {
     count = Math.min(8, Math.ceil(totalWatts / 3500));
-    modelName = `${count} dona 12/18 model (Multisplit)`;
+    modelName = `${count} dona 12-Model (har biri 12 000 BTU)`;
   }
 
   const positions: IAcPlacement[] = [];
