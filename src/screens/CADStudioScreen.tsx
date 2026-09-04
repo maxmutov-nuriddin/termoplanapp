@@ -304,7 +304,7 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
 
   const handleSaveAndReturn = async () => {
     try {
-      autoCenterRoom(360, 300);
+      autoCenterRoom();
 
       const state = useCanvasStore.getState();
       await saveRoom({
@@ -393,14 +393,19 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
         </View>
 
         {/* Tezkor Shakllar Paneli */}
-        <View style={styles.presetsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.presetsScrollView}
+          contentContainerStyle={styles.presetsRow}
+        >
           {!isLayoutLocked && (
             <>
               <TouchableOpacity
                 style={styles.presetChip}
                 onPress={() => {
                   loadPresetShape('RECTANGLE');
-                  autoCenterRoom(360, 300);
+                  autoCenterRoom();
                 }}
               >
                 <Text style={styles.presetChipText}>⏹️ To‘rtburchak</Text>
@@ -410,7 +415,7 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
                 style={styles.presetChip}
                 onPress={() => {
                   loadPresetShape('L_SHAPE');
-                  autoCenterRoom(360, 300);
+                  autoCenterRoom();
                 }}
               >
                 <Text style={styles.presetChipText}>📐 L-Shakl</Text>
@@ -420,7 +425,7 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
                 style={styles.presetChip}
                 onPress={() => {
                   loadPresetShape('T_SHAPE');
-                  autoCenterRoom(360, 300);
+                  autoCenterRoom();
                 }}
               >
                 <Text style={styles.presetChipText}>🔲 T-Shakl</Text>
@@ -428,18 +433,10 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
             </>
           )}
 
-          <TouchableOpacity style={styles.iconChip} onPress={() => autoCenterRoom(360, 300)}>
+          <TouchableOpacity style={styles.iconChip} onPress={() => autoCenterRoom()}>
             <Focus size={14} color="#38BDF8" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.presetChip, !showDimensions && styles.presetChipActive]}
-            onPress={toggleShowDimensions}
-          >
-            <Text style={[styles.presetChipText, !showDimensions && styles.presetChipTextActive]}>
-              {showDimensions ? '📏 Razmer' : '🙈 Yashirish'}
-            </Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.presetChip, isLayoutLocked && styles.presetChipDangerActive]}
@@ -455,7 +452,7 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
               <Trash2 size={14} color="#EF4444" />
             </TouchableOpacity>
           )}
-        </View>
+        </ScrollView>
 
         {/* 3. XONA O'LCHAMLARINI TEZKOR O'ZGARTIRISH PANELLARI (Qulay Slider/Stepper) */}
         <RoomDimensionsEditor isLayoutLocked={isLayoutLocked} styles={styles} />
@@ -527,25 +524,19 @@ export const CADStudioScreen: React.FC<{ navigation: any; route: any }> = ({ nav
           <Compass size={18} color="#F59E0B" />
         </TouchableOpacity>
 
-        {seasonMode === 'winter' && (
-          <TouchableOpacity
-            style={[styles.rightFloatBtn, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}
-            onPress={() => {
-              const patterns: HeatingPatternType[] = ['spiral', 'border_zone', 'double_snake', 'single_snake'];
-              const nextIdx = (patterns.indexOf(heatingPattern) + 1) % patterns.length;
-              setHeatingPattern(patterns[nextIdx]);
-            }}
-          >
-            <Flame size={18} color="#EF4444" />
-          </TouchableOpacity>
-        )}
+
       </View>
 
-      {/* 4. Pastki Element Xususiyatlari Paneli */}
-      {dimensionMode === '2D' && <ElementPropertyBar />}
-
-      {/* 5. Pastki Figma Uskunalar Paneli (Dock) */}
-      {dimensionMode === '2D' && <FigmaToolDock />}
+      {/* 4 & 5. Pastki Element Xususiyatlari Paneli va Figma Uskunalar Paneli (Dock) */}
+      {dimensionMode === '2D' && (
+        <View
+          style={[styles.bottomOverlay, { paddingBottom: Math.max(insets.bottom, 12) }]}
+          pointerEvents="box-none"
+        >
+          <ElementPropertyBar />
+          <FigmaToolDock />
+        </View>
+      )}
 
       {/* Devor Konstruksiyasini Sozlash Modali */}
       <Modal visible={editWallModalVisible} transparent animationType="fade">
@@ -820,11 +811,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
+  presetsScrollView: {
+    marginTop: 8,
+  },
   presetsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 8,
+    paddingRight: 16,
+  },
+  bottomOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 95,
   },
   presetChip: {
     backgroundColor: 'rgba(15, 23, 42, 0.88)',

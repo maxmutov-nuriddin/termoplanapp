@@ -161,6 +161,45 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
   const canvasWidth = isFullScreenStudio ? SCREEN_WIDTH : Math.min(SCREEN_WIDTH - 24, 380);
   const canvasHeight = isFullScreenStudio ? SCREEN_HEIGHT : 320;
 
+  const effectiveTransform = useMemo(() => {
+    if (isFullScreenStudio || validRoomPoints.length < 3) {
+      return { panX: panOffset.x, panY: panOffset.y, zoom: zoomScale };
+    }
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (const p of validRoomPoints) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
+    }
+
+    const roomW_m = Math.max(0.5, maxX - minX);
+    const roomH_m = Math.max(0.5, maxY - minY);
+    const roomW_px = roomW_m * scale;
+    const roomH_px = roomH_m * scale;
+
+    const padX = 24;
+    const padY = 24;
+    const fitScale = Math.min(
+      (canvasWidth - padX * 2) / roomW_px,
+      (canvasHeight - padY * 2) / roomH_px,
+      1.35
+    );
+
+    const centerX_m = (minX + maxX) / 2;
+    const centerY_m = (minY + maxY) / 2;
+
+    const panX = canvasWidth / 2 - centerX_m * scale * fitScale;
+    const panY = canvasHeight / 2 - centerY_m * scale * fitScale;
+
+    return { panX, panY, zoom: fitScale };
+  }, [isFullScreenStudio, validRoomPoints, panOffset.x, panOffset.y, zoomScale, canvasWidth, canvasHeight, scale]);
+
   const [draggedTarget, setDraggedTarget] = useState<{
     id: string;
     type: 'furniture' | 'window' | 'door' | 'boiler' | 'manifold' | 'ac' | 'vertex' | 'drawing_vertex' | 'wall_drag' | 'two_finger_pan' | 'three_finger_rotate' | 'readonly_pan' | 'canvas_pan' | 'interior_wall' | 'interior_wall_start' | 'interior_wall_end';
@@ -645,7 +684,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
   return (
     <View style={isFullScreenStudio ? styles.fullscreenContainer : styles.overviewContainer}>
       <View {...panResponder.panHandlers} style={isFullScreenStudio ? styles.fullscreenWrapper : styles.overviewWrapper}>
-        <StaticBackgroundGrid panX={panOffset.x % 24} panY={panOffset.y % 24} isFullScreen={isFullScreenStudio} width={canvasWidth} height={canvasHeight} />
+        <StaticBackgroundGrid panX={effectiveTransform.panX % 24} panY={effectiveTransform.panY % 24} isFullScreen={isFullScreenStudio} width={canvasWidth} height={canvasHeight} />
         <Svg width={canvasWidth} height={canvasHeight}>
 
           {/* Bo'sh xona bo'lsa yo'riqnoma */}
@@ -668,9 +707,9 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
           )}
 
           {/* Butun Loyiha Fazosi */}
-          <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomScale})`}>
+          <G transform={`translate(${effectiveTransform.panX}, ${effectiveTransform.panY}) scale(${effectiveTransform.zoom})`}>
             {/* 0. Xona Zamin Oq Foni (Har doim eng ostida) */}
-            {!isDrawingWall && validRoomPoints.length >= 3 && (
+            {validRoomPoints.length >= 3 && (
               <Path
                 d={`M ${validRoomPoints[0].x * scale} ${validRoomPoints[0].y * scale} ` + validRoomPoints.slice(1).map(p => `L ${p.x * scale} ${p.y * scale}`).join(' ') + ' Z'}
                 fill="#FFFFFF"
@@ -681,7 +720,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
             )}
 
             {/* 1. Tyoply Pol Isitish Quvurlari (Zamin ustida, devorlar ostida) */}
-            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'winter' && validRoomPoints.length >= 3 && (
+            {showPipesAndAirflow && !isReshapingRoom && seasonMode === 'winter' && validRoomPoints.length >= 3 && (
               <HeatingPipeRenderer
                 roomPoints={validRoomPoints}
                 manifoldPos={manifoldPosition || { x: 0.8, y: 0.8 }}
@@ -697,7 +736,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
             )}
 
             {/* 2. Xona Devorlari va Pol Poligoni */}
-            {!isDrawingWall && validRoomPoints.length >= 3 ? (
+            {validRoomPoints.length >= 3 ? (
               <WallRenderer
                 points={validRoomPoints}
                 walls={walls || []}
@@ -713,8 +752,8 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
               />
             ) : null}
 
-            {/* 2.5. Ichki Devorlar (Peregorodkalar) */}
-            {!isDrawingWall && (
+            {/* 2.5. Ichki Devorlar (Peregorodkalar / To'siqlar) */}
+            {(validRoomPoints.length >= 3 || !isDrawingWall) && (
               <InteriorWallRenderer
                 interiorWalls={interiorWalls || []}
                 selectedId={readOnly ? null : selectedElementId}
@@ -730,9 +769,9 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
             )}
 
             {/* 3. Eshiklar, Oynalar, Mebellar va Uskunalar */}
-            {!isDrawingWall && <DraggableElementsRenderer readOnly={readOnly} />}
+            {(validRoomPoints.length >= 3 || !isDrawingWall) && <DraggableElementsRenderer readOnly={readOnly} />}
 
-            {showPipesAndAirflow && !isDrawingWall && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (() => {
+            {showPipesAndAirflow && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (() => {
               const windows = useCanvasStore.getState().windows || [];
               const acCalc = calculateAcCountAndPositions(validRoomPoints, roomArea || 0, 3.0, windows.length, isSunnyRoom);
               const listToRender = (acCalc.positions && acCalc.positions.length > 0)
@@ -792,7 +831,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
 
             {/* 6. Burchak Tugunlari */}
             {!readOnly &&
-              !isDrawingWall &&
+              (validRoomPoints.length >= 3 || !isDrawingWall) &&
               validRoomPoints.map((p, idx) => {
                 const px = p.x * scale;
                 const py = p.y * scale;

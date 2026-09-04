@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Dimensions } from 'react-native';
 import { IPoint, IWall, IInteriorWall, IWindow, IDoor, IFurniture, IRoom } from '../types';
 import {
   calculatePolygonArea,
@@ -10,7 +11,7 @@ import {
   PIXELS_PER_METER,
 } from '../utils/geometry';
 
-export type CanvasTool = 'select' | 'pen_wall' | 'pen_room' | 'window' | 'door' | 'boiler' | 'manifold' | 'ac' | 'exclude_zone';
+export type CanvasTool = 'select' | 'pen_wall' | 'pen_room' | 'window' | 'door' | 'boiler' | 'manifold' | 'ac' | 'furniture' | 'exclude_zone';
 export type SeasonMode = 'winter' | 'summer';
 export type HeatingPatternType = 'spiral' | 'double_snake' | 'single_snake' | 'border_zone';
 
@@ -374,9 +375,10 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
   setSelectedTool: (tool) => {
     if (tool === 'pen_wall') {
+      const hasRoom = (get().roomPoints || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)).length >= 3;
       set({
         selectedTool: tool,
-        isDrawingWall: true,
+        isDrawingWall: !hasRoom,
         drawingPoints: [],
         selectedElementId: null,
         selectedElementType: null,
@@ -442,13 +444,18 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   setGuidelines: (guides, isSnapped = true) => set({ activeGuidelines: guides, isOrthoSnapped: isSnapped }),
   clearGuidelines: () => set({ activeGuidelines: [], isOrthoSnapped: false }),
 
-  autoCenterRoom: (viewportWidth = 360, viewportHeight = 300) => {
+  autoCenterRoom: (viewportWidth?: number, viewportHeight?: number) => {
     const { roomPoints } = get();
     const valid = (roomPoints || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
     if (valid.length < 3) {
       set({ panOffset: { x: 0, y: 0 }, zoomScale: 1.0, canvasRotation: 0, activeGuidelines: [], isOrthoSnapped: false });
       return;
     }
+
+    const { width: winW, height: winH } = Dimensions.get('window');
+    const isSmallViewport = Boolean(viewportHeight && viewportHeight <= 450);
+    const vW = viewportWidth || winW || 390;
+    const vH = viewportHeight || winH || 820;
 
     let minX = Infinity;
     let maxX = -Infinity;
@@ -467,17 +474,19 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const roomW_px = roomW_m * PIXELS_PER_METER;
     const roomH_px = roomH_m * PIXELS_PER_METER;
 
-    const margin = 48;
+    const marginX = isSmallViewport ? 32 : 64;
+    const marginY = isSmallViewport ? 40 : 320; // Yuqori header va pastki dock uchun bufer
     const fitScale = Math.min(
       1.35,
-      Math.max(0.4, Math.min((viewportWidth - margin) / roomW_px, (viewportHeight - margin) / roomH_px))
+      Math.max(0.4, Math.min((vW - marginX) / roomW_px, (vH - marginY) / roomH_px))
     );
 
     const centerX_m = (minX + maxX) / 2;
     const centerY_m = (minY + maxY) / 2;
 
-    const targetPanX = viewportWidth / 2 - centerX_m * PIXELS_PER_METER * fitScale;
-    const targetPanY = viewportHeight / 2 - centerY_m * PIXELS_PER_METER * fitScale;
+    const targetPanX = vW / 2 - centerX_m * PIXELS_PER_METER * fitScale;
+    const visualCenterY = isSmallViewport ? vH / 2 : (vH + 60) / 2;
+    const targetPanY = visualCenterY - centerY_m * PIXELS_PER_METER * fitScale;
 
     set({
       panOffset: { x: parseFloat(targetPanX.toFixed(1)), y: parseFloat(targetPanY.toFixed(1)) },
@@ -1114,6 +1123,23 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         selectedElementType: 'ac',
         selectedTool: 'select',
       });
+    } else if (tool === 'furniture') {
+      const snap = findNearestWallSnap(pos, roomPoints, 1.5, interiorWalls);
+      const newFurn: IFurniture = {
+        id,
+        type: 'sofa',
+        label: 'Divan',
+        position: snap.snapped ? snap.position : pos,
+        width: 2.0,
+        height: 0.9,
+        rotation: snap.snapped ? snap.rotation : 0,
+      };
+      set((state) => ({
+        furniture: [...state.furniture, newFurn],
+        selectedElementId: id,
+        selectedElementType: 'furniture',
+        selectedTool: 'select',
+      }));
     }
   },
 

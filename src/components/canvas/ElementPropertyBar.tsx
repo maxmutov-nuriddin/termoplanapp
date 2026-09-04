@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { RotateCw, Plus, Minus, Trash2, X, Move, FlipHorizontal, Edit3 } from 'lucide-react-native';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -40,7 +40,7 @@ export const ElementPropertyBar: React.FC = () => {
   const currentIntWall = selectedElementType === 'interior_wall' ? (state.interiorWalls || []).find((w) => w.id === selectedElementId) : null;
 
   const getTitle = () => {
-    if (selectedElementType === 'interior_wall') return `🧱 Ichki Devor (${currentIntWall?.length?.toFixed(2) || '3.00'}m)`;
+    if (selectedElementType === 'interior_wall') return `🧱 Devor (${currentIntWall?.length?.toFixed(2) || '3.00'}m)`;
     if (selectedElementType === 'window') return `🪟 Oyna (${currentWindow?.width?.toFixed(2) || '1.40'}m)`;
     if (selectedElementType === 'door') return `🚪 Eshik (${currentDoor?.width?.toFixed(2) || '0.90'}m)`;
     if (selectedElementType === 'boiler') return '♨️ Kotyol';
@@ -76,63 +76,70 @@ export const ElementPropertyBar: React.FC = () => {
 
   return (
     <>
-      <View style={styles.propBar}>
-        <View style={styles.leftInfo}>
-          <Move size={14} color={COLORS.primaryLight} />
-          <Text style={styles.titleText}>{getTitle()}</Text>
-        </View>
+      <View style={styles.propBarWrapper} pointerEvents="box-none">
+        <View style={styles.propBar}>
+          <View style={styles.leftInfo}>
+            <Move size={14} color={COLORS.primaryLight} />
+            <Text style={styles.titleText} numberOfLines={1}>{getTitle()}</Text>
+          </View>
 
-        <View style={styles.actionsGroup}>
-          {hasDimensions && (
-            <TouchableOpacity style={[styles.actionBtn, styles.editDimBtn]} onPress={() => setDimensionModalVisible(true)}>
-              <Edit3 size={12} color={COLORS.surface} />
-              <Text style={styles.editDimBtnText}>O‘lcham</Text>
-            </TouchableOpacity>
-          )}
-
-          {selectedElementType === 'door' && (
-            <TouchableOpacity style={[styles.actionBtn, styles.flipBtn]} onPress={cycleDoorOpenDirection}>
-              <FlipHorizontal size={12} color={COLORS.surface} />
-              <Text style={styles.flipBtnText}>{getDoorDirectionLabel()}</Text>
-            </TouchableOpacity>
-          )}
-
-          {(selectedElementType === 'furniture' || selectedElementType === 'ac' || selectedElementType === 'window') && (
-            <TouchableOpacity style={styles.actionBtn} onPress={() => rotateSelectedElement(45)}>
-              <RotateCw size={12} color={COLORS.primaryLight} />
-              <Text style={styles.actionBtnText}>45°</Text>
-            </TouchableOpacity>
-          )}
-
-          {hasDimensions && (
-            <View style={styles.stepperGroup}>
-              <TouchableOpacity
-                style={styles.stepBtn}
-                onPress={() => resizeSelectedElement(selectedElementType === 'door' ? -0.05 : -0.1, -0.1)}
-              >
-                <Minus size={14} color={COLORS.surface} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.actionsScroll}
+            contentContainerStyle={styles.actionsGroup}
+          >
+            {hasDimensions && (
+              <TouchableOpacity style={[styles.actionBtn, styles.editDimBtn]} onPress={() => setDimensionModalVisible(true)}>
+                <Edit3 size={12} color={COLORS.surface} />
+                <Text style={styles.editDimBtnText}>O‘lcham</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.stepBtn}
-                onPress={() => resizeSelectedElement(selectedElementType === 'door' ? 0.05 : 0.1, 0.1)}
-              >
-                <Plus size={14} color={COLORS.surface} />
+            )}
+
+            {selectedElementType === 'door' && (
+              <TouchableOpacity style={[styles.actionBtn, styles.flipBtn]} onPress={cycleDoorOpenDirection}>
+                <FlipHorizontal size={12} color={COLORS.surface} />
+                <Text style={styles.flipBtnText}>{getDoorDirectionLabel()}</Text>
               </TouchableOpacity>
-            </View>
-          )}
+            )}
 
-          {canDelete && (
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.deleteBtn]}
-              onPress={deleteSelectedElement}
-            >
-              <Trash2 size={13} color={COLORS.danger} />
+            {(selectedElementType === 'furniture' || selectedElementType === 'ac' || selectedElementType === 'window') && (
+              <TouchableOpacity style={styles.actionBtn} onPress={() => rotateSelectedElement(45)}>
+                <RotateCw size={12} color={COLORS.primaryLight} />
+                <Text style={styles.actionBtnText}>45°</Text>
+              </TouchableOpacity>
+            )}
+
+            {hasDimensions && (
+              <View style={styles.stepperGroup}>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => resizeSelectedElement(selectedElementType === 'door' ? -0.05 : -0.1, -0.1)}
+                >
+                  <Minus size={14} color={COLORS.surface} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.stepBtn}
+                  onPress={() => resizeSelectedElement(selectedElementType === 'door' ? 0.05 : 0.1, 0.1)}
+                >
+                  <Plus size={14} color={COLORS.surface} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {canDelete && (
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.deleteBtn]}
+                onPress={deleteSelectedElement}
+              >
+                <Trash2 size={13} color={COLORS.danger} />
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedElement(null, null)}>
+              <X size={16} color={COLORS.textMuted} />
             </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.closeBtn} onPress={() => setSelectedElement(null, null)}>
-            <X size={16} color={COLORS.textMuted} />
-          </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
 
@@ -145,25 +152,37 @@ export const ElementPropertyBar: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  propBarWrapper: {
+    alignSelf: 'center',
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   propBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.darkSurface,
-    borderRadius: RADIUS.md,
+    backgroundColor: '#0F172A',
+    borderRadius: RADIUS.xl,
     paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.sm,
+    paddingVertical: 7,
+    width: '92%',
+    maxWidth: 440,
     borderWidth: 1,
-    borderColor: COLORS.darkBorder,
+    borderColor: 'rgba(51, 65, 85, 0.8)',
     ...SHADOWS.floating,
+    elevation: 8,
   },
   leftInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flex: 1,
+    marginRight: 6,
+    flexShrink: 0,
+  },
+  actionsScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   titleText: {
     fontSize: 12,

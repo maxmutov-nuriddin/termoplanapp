@@ -1,69 +1,170 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Square, ArrowRight, MousePointer2, Refrigerator } from 'lucide-react-native';
+import { Square, ArrowRight, MousePointer2, DoorClosed, Maximize2, Box, PenTool } from 'lucide-react-native';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 export const FigmaToolDock: React.FC = () => {
-  const { toolMode, setToolMode } = useCanvasStore(
+  const {
+    selectedTool,
+    setSelectedTool,
+    roomPoints,
+    loadPresetShape,
+    autoCenterRoom,
+    doors,
+    windows,
+    furniture,
+    placeElementAt,
+  } = useCanvasStore(
     useShallow((s) => ({
-      toolMode: s.toolMode,
-      setToolMode: s.setToolMode,
+      selectedTool: s.selectedTool,
+      setSelectedTool: s.setSelectedTool,
+      roomPoints: s.roomPoints,
+      loadPresetShape: s.loadPresetShape,
+      autoCenterRoom: s.autoCenterRoom,
+      doors: s.doors,
+      windows: s.windows,
+      furniture: s.furniture,
+      placeElementAt: s.placeElementAt,
     }))
   );
+
+  const ensureRoomExists = () => {
+    const pts = (roomPoints || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (pts.length < 3) {
+      loadPresetShape('RECTANGLE');
+      autoCenterRoom();
+      return useCanvasStore.getState().roomPoints;
+    }
+    return pts;
+  };
+
+  const handleSelect = () => {
+    setSelectedTool('select');
+  };
+
+  const handleRoom = () => {
+    const pts = (roomPoints || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (pts.length < 3) {
+      loadPresetShape('RECTANGLE');
+      autoCenterRoom();
+      setSelectedTool('select');
+    } else {
+      setSelectedTool(selectedTool === 'pen_room' ? 'select' : 'pen_room');
+    }
+  };
+
+  const handleWall = () => {
+    ensureRoomExists();
+    setSelectedTool(selectedTool === 'pen_wall' ? 'select' : 'pen_wall');
+  };
+
+  const handleDoor = () => {
+    const pts = ensureRoomExists();
+    if ((doors || []).length === 0 && pts.length >= 3) {
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const maxY = Math.max(...ys);
+      placeElementAt('door', { x: midX, y: maxY });
+    } else {
+      setSelectedTool(selectedTool === 'door' ? 'select' : 'door');
+    }
+  };
+
+  const handleWindow = () => {
+    const pts = ensureRoomExists();
+    if ((windows || []).length === 0 && pts.length >= 3) {
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const minY = Math.min(...ys);
+      placeElementAt('window', { x: midX, y: minY });
+    } else {
+      setSelectedTool(selectedTool === 'window' ? 'select' : 'window');
+    }
+  };
+
+  const handleFurniture = () => {
+    const pts = ensureRoomExists();
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const midX = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
+    placeElementAt('furniture', { x: midX, y: midY });
+  };
+
+  const isSelectActive = selectedTool === 'select';
+  const isRoomActive = selectedTool === 'pen_room';
+  const isWallActive = selectedTool === 'pen_wall';
+  const isDoorActive = selectedTool === 'door';
+  const isWindowActive = selectedTool === 'window';
+  const isFurnActive = selectedTool === 'furniture';
 
   return (
     <View style={styles.dockWrapper}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dockContainer}>
+        {/* Tanlash */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'select' && styles.toolBtnActive]}
-          onPress={() => setToolMode('select')}
+          style={[styles.toolBtn, isSelectActive && styles.toolBtnActive]}
+          onPress={handleSelect}
+          activeOpacity={0.7}
         >
-          <MousePointer2 size={18} color={toolMode === 'select' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'select' && styles.toolTextActive]}>Tanlash</Text>
+          <MousePointer2 size={18} color={isSelectActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isSelectActive && styles.toolTextActive]}>Tanlash</Text>
         </TouchableOpacity>
 
+        {/* Xona */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'draw_room' && styles.toolBtnActive]}
-          onPress={() => setToolMode('draw_room')}
+          style={[styles.toolBtn, isRoomActive && styles.toolBtnActive]}
+          onPress={handleRoom}
+          activeOpacity={0.7}
         >
-          <Square size={18} color={toolMode === 'draw_room' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'draw_room' && styles.toolTextActive]}>Xona</Text>
+          <Square size={18} color={isRoomActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isRoomActive && styles.toolTextActive]}>Xona</Text>
         </TouchableOpacity>
 
+        {/* To'siq */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'draw_interior_wall' && styles.toolBtnActive]}
-          onPress={() => setToolMode('draw_interior_wall')}
+          style={[styles.toolBtn, isWallActive && styles.toolBtnActive]}
+          onPress={handleWall}
+          activeOpacity={0.7}
         >
-          <ArrowRight size={18} color={toolMode === 'draw_interior_wall' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'draw_interior_wall' && styles.toolTextActive]}>To'siq</Text>
+          <ArrowRight size={18} color={isWallActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isWallActive && styles.toolTextActive]}>To'siq</Text>
         </TouchableOpacity>
 
         <View style={styles.divider} />
 
+        {/* Eshik */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'place_door' && styles.toolBtnActive]}
-          onPress={() => setToolMode('place_door')}
+          style={[styles.toolBtn, isDoorActive && styles.toolBtnActive]}
+          onPress={handleDoor}
+          activeOpacity={0.7}
         >
-          <Square size={18} color={toolMode === 'place_door' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'place_door' && styles.toolTextActive]}>Eshik</Text>
+          <DoorClosed size={18} color={isDoorActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isDoorActive && styles.toolTextActive]}>Eshik</Text>
         </TouchableOpacity>
 
+        {/* Oyna */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'place_window' && styles.toolBtnActive]}
-          onPress={() => setToolMode('place_window')}
+          style={[styles.toolBtn, isWindowActive && styles.toolBtnActive]}
+          onPress={handleWindow}
+          activeOpacity={0.7}
         >
-          <Square size={18} color={toolMode === 'place_window' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'place_window' && styles.toolTextActive]}>Oyna</Text>
+          <Maximize2 size={18} color={isWindowActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isWindowActive && styles.toolTextActive]}>Oyna</Text>
         </TouchableOpacity>
 
+        {/* Mebel */}
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'place_furniture' && styles.toolBtnActive]}
-          onPress={() => setToolMode('place_furniture')}
+          style={[styles.toolBtn, isFurnActive && styles.toolBtnActive]}
+          onPress={handleFurniture}
+          activeOpacity={0.7}
         >
-          <Refrigerator size={18} color={toolMode === 'place_furniture' ? COLORS.primaryLight : COLORS.textMuted} />
-          <Text style={[styles.toolText, toolMode === 'place_furniture' && styles.toolTextActive]}>Mebel</Text>
+          <Box size={18} color={isFurnActive ? COLORS.primaryLight : COLORS.textMuted} />
+          <Text style={[styles.toolText, isFurnActive && styles.toolTextActive]}>Mebel</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -72,46 +173,48 @@ export const FigmaToolDock: React.FC = () => {
 
 const styles = StyleSheet.create({
   dockWrapper: {
-    position: 'absolute',
-    bottom: SPACING.xl,
     alignSelf: 'center',
-    backgroundColor: COLORS.darkSurface,
+    backgroundColor: '#0F172A', // Dark Slate CAD Surface
     borderRadius: RADIUS.xl,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
     borderWidth: 1,
-    borderColor: COLORS.darkBorder,
+    borderColor: 'rgba(51, 65, 85, 0.8)',
     ...SHADOWS.floating,
+    elevation: 8,
   },
   dockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING.xs,
   },
   toolBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderRadius: RADIUS.md,
+    minWidth: 50,
   },
   toolBtnActive: {
-    backgroundColor: 'rgba(20, 184, 166, 0.15)', // primaryLight with opacity
+    backgroundColor: 'rgba(20, 184, 166, 0.25)', // primaryLight active background
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
   },
   toolText: {
-    fontSize: 9.5,
-    color: COLORS.textMuted,
+    fontSize: 10,
+    color: '#94A3B8',
     marginTop: 4,
     fontWeight: '600',
   },
   toolTextActive: {
-    color: COLORS.primaryLight,
+    color: '#14B8A6',
     fontWeight: '800',
   },
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: COLORS.darkBorder,
+    backgroundColor: '#334155',
     marginHorizontal: 4,
   },
 });
