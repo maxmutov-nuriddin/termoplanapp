@@ -72,7 +72,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         const res = await axios.post(`${API_BASE_URL}/auth/login`, {
           email: cleanEmail,
           password,
-        }, { timeout: 2000 });
+        }, { timeout: 15000 });
 
         if (res.data && res.data.user) {
           const detectedRole: UserRole = res.data.user.role === 'support' || res.data.user.role === 'admin' ? 'support' : 'user';
@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           password,
           role,
           phone,
-        }, { timeout: 2000 });
+        }, { timeout: 15000 });
 
         if (res.data && res.data.user) {
           const authUser: AuthUser = {

@@ -3,20 +3,18 @@ import { IProject, IRoom, ClimateRegion } from '../types';
 import Constants from 'expo-constants';
 import { ROOM_PRESETS } from '../utils/geometry';
 
+export const RENDER_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || 'https://termoplanbackend.onrender.com/api';
+
 const getBackendUrl = () => {
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:5001/api`;
-  }
-  return 'http://192.168.0.59:5001/api';
+  // Render bulutli server manzili (yoki .env dagi EXPO_PUBLIC_API_URL)
+  return RENDER_BACKEND_URL;
 };
 
 export const API_BASE_URL = getBackendUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 1200,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
