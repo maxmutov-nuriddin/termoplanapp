@@ -293,6 +293,60 @@ function alignRing(target: IPoint[], reference: IPoint[]): IPoint[] {
   return [...target.slice(minIdx), ...target.slice(0, minIdx)];
 }
 
+function computeOrthogonalPolygonInset(polygon: IPoint[], d: number): IPoint[] | null {
+  const n = polygon.length;
+  if (n < 3) return null;
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += polygon[i].x * polygon[j].y - polygon[j].x * polygon[i].y;
+  }
+  const isClockwise = area > 0;
+  const pts = isClockwise ? [...polygon] : [...polygon].reverse();
+
+  const lines: Array<{ type: 'horiz' | 'vert'; val: number }> = [];
+  for (let i = 0; i < n; i++) {
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % n];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    if (Math.abs(dy) <= Math.abs(dx)) {
+      const shiftY = dx >= 0 ? d : -d;
+      lines.push({ type: 'horiz', val: p1.y + shiftY });
+    } else {
+      const shiftX = dy >= 0 ? -d : d;
+      lines.push({ type: 'vert', val: p1.x + shiftX });
+    }
+  }
+
+  const insetPts: IPoint[] = [];
+  for (let i = 0; i < n; i++) {
+    const prevLine = lines[(i - 1 + n) % n];
+    const currLine = lines[i];
+    let x: number, y: number;
+    if (prevLine.type === 'horiz' && currLine.type === 'vert') {
+      x = currLine.val;
+      y = prevLine.val;
+    } else if (prevLine.type === 'vert' && currLine.type === 'horiz') {
+      x = prevLine.val;
+      y = currLine.val;
+    } else {
+      x = pts[i].x;
+      y = pts[i].y;
+    }
+    insetPts.push({ x: parseFloat(x.toFixed(3)), y: parseFloat(y.toFixed(3)) });
+  }
+
+  let newArea = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    newArea += insetPts[i].x * insetPts[j].y - insetPts[j].x * insetPts[i].y;
+  }
+  if (Math.abs(newArea) / 2 < 0.3) return null;
+  return insetPts;
+}
+
 function generateInwardPolygonCoil(
   polygonMeters: IPoint[],
   manifoldPos: IPoint,
@@ -307,15 +361,155 @@ function generateInwardPolygonCoil(
     if (p.y > maxY) maxY = p.y;
   }
 
-  const margin = 0.28 * scalePx;
-  const p = 0.18 * scalePx; // 18sm quvur qadami
-
   const mX = manifoldPos && Number.isFinite(manifoldPos.x)
     ? manifoldPos.x * scalePx
     : (minX + 0.35) * scalePx;
   const mY = manifoldPos && Number.isFinite(manifoldPos.y)
     ? manifoldPos.y * scalePx
     : (minY + 0.35) * scalePx;
+
+  const boxArea = (maxX - minX) * (maxY - minY);
+  const polyArea = calculatePolygonArea(polygonMeters);
+  const isRectangle = polygonMeters.length === 4 && Math.abs(boxArea - polyArea) < 0.05 * boxArea;
+  const isLShape = polygonMeters.length === 6;
+
+  // 1. L-Shaklli xonalar uchun maxsus 6-tomonli uzluksiz Two-Lane Bifilar Spiral
+  if (isLShape) {
+    const xVals = [...new Set(polygonMeters.map(p => p.x))].sort((a, b) => a - b);
+    const yVals = [...new Set(polygonMeters.map(p => p.y))].sort((a, b) => a - b);
+    const midX = xVals.find(x => x > minX && x < maxX) || (minX + maxX) / 2;
+    const midY = yVals.find(y => y > minY && y < maxY) || (minY + maxY) / 2;
+
+    const p = 0.18 * scalePx;
+    const margin = 0.28 * scalePx;
+
+    let xL1 = minX * scalePx + margin;
+    let xR1_top = maxX * scalePx - margin;
+    let yB1_top = midY * scalePx - margin;
+    let xR1_bot = midX * scalePx - margin;
+    let yB1_bot = maxY * scalePx - margin;
+    let yT1 = minY * scalePx + margin;
+
+    let xL2 = xL1 + p;
+    let xR2_top = xR1_top - p;
+    let yB2_top = yB1_top - p;
+    let xR2_bot = xR1_bot - p;
+    let yB2_bot = yB1_bot - p;
+    let yT2 = yT1 + p;
+
+    const feed: IPoint[] = [];
+    const ret: IPoint[] = [];
+
+    feed.push({ x: mX, y: yT1 });
+    ret.push({ x: mX, y: yT2 });
+
+    while (xR2_bot - xL2 >= 2.0 * p && yB2_top - yT2 >= 2.0 * p) {
+      feed.push({ x: xR1_top, y: yT1 });
+      ret.push({ x: xR2_top, y: yT2 });
+
+      feed.push({ x: xR1_top, y: yB1_top });
+      ret.push({ x: xR2_top, y: yB2_top });
+
+      feed.push({ x: xR1_bot, y: yB1_top });
+      ret.push({ x: xR2_bot, y: yB2_top });
+
+      feed.push({ x: xR1_bot, y: yB1_bot });
+      ret.push({ x: xR2_bot, y: yB2_bot });
+
+      feed.push({ x: xL1, y: yB1_bot });
+      ret.push({ x: xL2, y: yB2_bot });
+
+      feed.push({ x: xL1, y: yT1 + 2 * p });
+      ret.push({ x: xL2, y: yT2 + 2 * p });
+
+      xL1 += 2 * p;
+      xR1_top -= 2 * p;
+      yB1_top -= 2 * p;
+      xR1_bot -= 2 * p;
+      yB1_bot -= 2 * p;
+      yT1 += 2 * p;
+
+      xL2 += 2 * p;
+      xR2_top -= 2 * p;
+      yB2_top -= 2 * p;
+      xR2_bot -= 2 * p;
+      yB2_bot -= 2 * p;
+      yT2 += 2 * p;
+    }
+
+    const lastF = feed[feed.length - 1];
+    const lastR = ret[ret.length - 1];
+    feed.push({ x: lastF.x + p, y: lastF.y });
+    feed.push({ x: lastR.x, y: lastR.y });
+
+    const returnOutward = ret.reverse();
+    const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
+
+    return { feed, ret: returnOutward, lengthM };
+  }
+
+  // 2. Boshqa murakkab poligonlar uchun
+  if (!isRectangle) {
+    const rings: Array<Array<{ x: number; y: number }>> = [];
+    for (let d = 0.28; d <= 2.5; d += 0.18) {
+      const r = computeOrthogonalPolygonInset(polygonMeters, d);
+      if (!r) break;
+      let isValid = true;
+      for (let k = 0; k < r.length; k++) {
+        const nextK = (k + 1) % r.length;
+        const origDx = polygonMeters[nextK].x - polygonMeters[k].x;
+        const origDy = polygonMeters[nextK].y - polygonMeters[k].y;
+        const newDx = r[nextK].x - r[k].x;
+        const newDy = r[nextK].y - r[k].y;
+        if (origDx * newDx < -0.01 || origDy * newDy < -0.01) {
+          isValid = false;
+          break;
+        }
+      }
+      if (!isValid) break;
+      rings.push(r.map(p => ({ x: p.x * scalePx, y: p.y * scalePx })));
+    }
+
+    if (rings.length >= 2) {
+      const polyFeed: IPoint[] = [];
+      const polyRet: IPoint[] = [];
+
+      polyFeed.push({ x: mX, y: rings[0][0].y });
+      polyRet.push({ x: mX, y: rings[1][0].y });
+
+      const pairCount = Math.floor(rings.length / 2);
+      for (let k = 0; k < pairCount; k++) {
+        const rF = rings[2 * k];
+        const rR = rings[2 * k + 1];
+
+        for (let i = 0; i < rF.length; i++) {
+          polyFeed.push(rF[i]);
+          polyRet.push(rR[i]);
+        }
+
+        if (k < pairCount - 1) {
+          const nextF = rings[2 * (k + 1)];
+          const nextR = rings[2 * (k + 1) + 1];
+          polyFeed.push({ x: nextF[0].x, y: rF[rF.length - 1].y });
+          polyRet.push({ x: nextR[0].x, y: rR[rR.length - 1].y });
+        }
+      }
+
+      const lastF = polyFeed[polyFeed.length - 1];
+      const lastR = polyRet[polyRet.length - 1];
+      polyFeed.push({ x: lastF.x, y: lastR.y });
+      polyFeed.push({ x: lastR.x, y: lastR.y });
+
+      const polyRetOutward = polyRet.reverse();
+
+      const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
+      return { feed: polyFeed, ret: polyRetOutward, lengthM };
+    }
+  }
+
+  // 2. Standart to'rtburchak xonalar uchun Two-Lane Bifilar Spiral
+  const margin = 0.28 * scalePx;
+  const p = 0.18 * scalePx; // 18sm quvur qadami
 
   let xL1 = minX * scalePx + margin;
   let xR1 = maxX * scalePx - margin;
@@ -332,7 +526,6 @@ function generateInwardPolygonCoil(
 
   // 1. Kollektor (KL) shkafiga parallel ulanish (mutlaqo 0 kesishuv)
   feed.push({ x: mX, y: yT1 });
-
   ret.push({ x: mX, y: yT2 });
 
   // 2. Parallel spiral qavatlari (Two-Lane Bifilar Spiral)
@@ -371,8 +564,7 @@ function generateInwardPolygonCoil(
   // 4. Return quvurini teskari (outward) tartibda kollektorga qaytarish (tugash nuqtasi)
   const returnOutward = ret.reverse();
 
-  const areaM2 = calculatePolygonArea(polygonMeters);
-  const lengthM = parseFloat((areaM2 / 0.18).toFixed(1));
+  const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
 
   return { feed, ret: returnOutward, lengthM };
 }
