@@ -773,21 +773,36 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
 
             {showPipesAndAirflow && !isReshapingRoom && seasonMode === 'summer' && validRoomPoints.length >= 3 && (() => {
               const windows = useCanvasStore.getState().windows || [];
-              const acCalc = calculateAcCountAndPositions(validRoomPoints, roomArea || 0, 3.0, windows.length, isSunnyRoom);
-              const listToRender = (acCalc.positions && acCalc.positions.length > 0)
-                ? acCalc.positions
-                : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
+              const interiorWalls = useCanvasStore.getState().interiorWalls || [];
+              const acPosition = useCanvasStore.getState().acPosition;
+              const acCalc = calculateAcCountAndPositions(
+                validRoomPoints,
+                roomArea || 0,
+                3.0,
+                windows.length,
+                isSunnyRoom,
+                interiorWalls,
+                windows,
+                0
+              );
+              const listToRender = acPosition
+                ? [{ ...acPosition, btu: acCalc.positions[0]?.btu || 12000, label: 'AC' }]
+                : ((acCalc.positions && acCalc.positions.length > 0)
+                  ? acCalc.positions
+                  : [{ x: 1.2, y: 0.5, targetAngle: 90 }]);
               return (
                 <>
                   {listToRender.map((pos, idx) => (
                     <AirflowConeRenderer
                       key={`ac_render_${idx}`}
-                      roomWidthM={roomArea ? Math.sqrt(roomArea) * 1.3 : 6.5}
-                      roomHeightM={roomArea ? Math.sqrt(roomArea) * 1.3 : 5.0}
+                      roomWidthM={pos.roomWidthM || (roomArea ? Math.sqrt(roomArea) * 1.3 : 6.5)}
+                      roomHeightM={pos.roomHeightM || (roomArea ? Math.sqrt(roomArea) * 1.3 : 5.0)}
                       acPos={pos}
                       furniture={useCanvasStore.getState().furniture || []}
-                      recommendedBtu={recommendedBtu}
+                      recommendedBtu={pos.btu || recommendedBtu}
                       showDimensions={showDimensions}
+                      interiorWalls={interiorWalls}
+                      roomPolygon={validRoomPoints}
                     />
                   ))}
                 </>

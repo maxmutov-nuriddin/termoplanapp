@@ -1,6 +1,6 @@
 const EMPTY_GUIDELINES: Array<{ type: 'x' | 'y'; val: number }> = [];
 import { IPoint, IWall } from '../types';
-import { calculateMasterPlumberPlan } from './masterPlumberEngine';
+import { calculateMasterPlumberPlan, getHeatableArea } from './masterPlumberEngine';
 
 export const PIXELS_PER_METER = 40;
 
@@ -683,6 +683,13 @@ export interface IAcPlacement {
   y: number;
   targetAngle: number;
   label?: string;
+  btu?: number;
+  modelName?: string;
+  roomWidthM?: number;
+  roomHeightM?: number;
+  maxRangeM?: number;
+  roomName?: string;
+  roomAreaM2?: number;
 }
 
 export function calculateAcCountAndPositions(
@@ -690,49 +697,228 @@ export function calculateAcCountAndPositions(
   roomArea: number,
   ceilingHeight: number = 3.0,
   windowsCount: number = 0,
-  isSunny: boolean = false
-): { count: number; modelName: string; totalKw: string; totalBtu: number; positions: IAcPlacement[] } {
-  const valid = (roomPoints || []).filter(p => p && Number.isFinite(p.x) && Number.isFinite(p.y));
+  isSunny: boolean = false,
+  interiorWalls: Array<{ id?: string; startPoint: IPoint; endPoint: IPoint; thicknessM?: number }> = [],
+  windows: Array<{ position: IPoint; width?: number }> = [],
+  compassNorthAngle: number = 0
+): {
+  count: number;
+  modelName: string;
+  totalKw: string;
+  totalBtu: number;
+  positions: IAcPlacement[];
+  roomBreakdown?: Array<{
+    name: string;
+    areaM2: number;
+    btu: number;
+    modelName: string;
+    windowCount: number;
+    pos: IAcPlacement;
+  }>;
+} {
+  const valid = (roomPoints || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y));
   if (valid.length < 3) {
     return {
       count: 0,
       modelName: 'Hali chizilmadi',
       totalKw: '0.0',
       totalBtu: 0,
-      positions: []
+      positions: [],
     };
   }
 
-  let area = roomArea || 0;
-  if (area === 0) {
-    let areaSum = 0;
-    for (let i = 0; i < valid.length; i++) {
-      const j = (i + 1) % valid.length;
-      areaSum += valid[i].x * valid[j].y;
-      areaSum -= valid[j].x * valid[i].y;
-    }
-    area = Math.round(Math.abs(areaSum) / 2);
-  }
-
-  const height = ceilingHeight || 3.0;
-  const volume = Math.round(area * height);
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  valid.forEach(p => {
+  valid.forEach((p) => {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.y > maxY) maxY = p.y;
   });
 
+  const height = ceilingHeight || 3.0;
+
+  // 1. Agar ichki devorlar mavjud bo'lsa, xonalarni (sub-room) ajratib, har biriga alohida hisoblaymiz
+  if (interiorWalls && interiorWalls.length > 0) {
+    const excludes: Array<{ points: IPoint[] }> = [];
+    for (const iw of interiorWalls) {
+      if (!iw || !iw.startPoint || !iw.endPoint) continue;
+      const halfThick = Math.max(0.06, (iw.thicknessM || 0.12) / 2);
+      const dx = iw.endPoint.x - iw.startPoint.x;
+      const dy = iw.endPoint.y - iw.startPoint.y;
+      const len = Math.hypot(dx, dy);
+      if (len <= 0.1) continue;
+      const nx = (-dy / len) * halfThick;
+      const ny = (dx / len) * halfThick;
+      const ux = dx / len;
+      const uy = dy / len;
+
+      const isStartNearOuter =
+        iw.startPoint.x <= minX + 0.2 || iw.startPoint.x >= maxX - 0.2 || iw.startPoint.y <= minY + 0.2 || iw.startPoint.y >= maxY - 0.2;
+      const isEndNearOuter =
+        iw.endPoint.x <= minX + 0.2 || iw.endPoint.x >= maxX - 0.2 || iw.endPoint.y <= minY + 0.2 || iw.endPoint.y >= maxY - 0.2;
+
+      let isStartNearOtherWall = false;
+      let isEndNearOtherWall = false;
+      for (const other of interiorWalls) {
+        if (!other || other.id === iw.id) continue;
+        if (Math.abs(iw.startPoint.y - other.startPoint.y) < 0.15 && iw.startPoint.x >= Math.min(other.startPoint.x, other.endPoint.x) - 0.1 && iw.startPoint.x <= Math.max(other.startPoint.x, other.endPoint.x) + 0.1) isStartNearOtherWall = true;
+        if (Math.abs(iw.endPoint.y - other.startPoint.y) < 0.15 && iw.endPoint.x >= Math.min(other.startPoint.x, other.endPoint.x) - 0.1 && iw.endPoint.x <= Math.max(other.startPoint.x, other.endPoint.x) + 0.1) isEndNearOtherWall = true;
+        if (Math.abs(iw.startPoint.x - other.startPoint.x) < 0.15 && iw.startPoint.y >= Math.min(other.startPoint.y, other.endPoint.y) - 0.1 && iw.startPoint.y <= Math.max(other.startPoint.y, other.endPoint.y) + 0.1) isStartNearOtherWall = true;
+        if (Math.abs(iw.endPoint.x - other.startPoint.x) < 0.15 && iw.endPoint.y >= Math.min(other.startPoint.y, other.endPoint.y) - 0.1 && iw.endPoint.y <= Math.max(other.startPoint.y, other.endPoint.y) + 0.1) isEndNearOtherWall = true;
+      }
+
+      const exStart = isStartNearOuter || isStartNearOtherWall ? 0.12 : 0.0;
+      const exEnd = isEndNearOuter || isEndNearOtherWall ? 0.12 : 0.0;
+
+      excludes.push({
+        points: [
+          { x: iw.startPoint.x - ux * exStart + nx, y: iw.startPoint.y - uy * exStart + ny },
+          { x: iw.endPoint.x + ux * exEnd + nx, y: iw.endPoint.y + uy * exEnd + ny },
+          { x: iw.endPoint.x + ux * exEnd - nx, y: iw.endPoint.y + uy * exEnd - ny },
+          { x: iw.startPoint.x - ux * exStart - nx, y: iw.startPoint.y - uy * exStart - ny },
+        ],
+      });
+    }
+
+    const islands = getHeatableArea(valid, excludes);
+    const habitableIslands = islands.filter((isl) => calculatePolygonArea(isl) >= 2.5);
+
+    if (habitableIslands.length > 1) {
+      const positions: IAcPlacement[] = [];
+      const roomBreakdown: Array<{
+        name: string;
+        areaM2: number;
+        btu: number;
+        modelName: string;
+        windowCount: number;
+        pos: IAcPlacement;
+      }> = [];
+      let totalBtuSum = 0;
+
+      habitableIslands.forEach((isl, idx) => {
+        const subArea = parseFloat(calculatePolygonArea(isl).toFixed(1));
+        const xs = isl.map((p) => p.x);
+        const ys = isl.map((p) => p.y);
+        const rMinX = Math.min(...xs);
+        const rMaxX = Math.max(...xs);
+        const rMinY = Math.min(...ys);
+        const rMaxY = Math.max(...ys);
+        const rW = rMaxX - rMinX;
+        const rH = rMaxY - rMinY;
+
+        // Shu xonadagi oynalar
+        const winInRoom = (windows || []).filter((w) => {
+          if (!w || !w.position) return false;
+          return (
+            w.position.x >= rMinX - 0.35 &&
+            w.position.x <= rMaxX + 0.35 &&
+            w.position.y >= rMinY - 0.35 &&
+            w.position.y <= rMaxY + 0.35
+          );
+        });
+
+        const subVol = Math.round(subArea * height);
+        const baseW = subVol * 40;
+        const winW = winInRoom.length * 350 * (isSunny ? 1.2 : 1.0);
+        const subWatts = Math.round(baseW + winW);
+
+        let subBtu = 9000;
+        let subModelName = '09-Model (9 000 BTU / 2.6 kW)';
+        if (subWatts > 2800 && subWatts <= 4000) {
+          subBtu = 12000;
+          subModelName = '12-Model (12 000 BTU / 3.5 kW)';
+        } else if (subWatts > 4000) {
+          subBtu = 18000;
+          subModelName = '18-Model (18 000 BTU / 5.2 kW)';
+        }
+
+        totalBtuSum += subBtu;
+
+        const hasTopOuter = Math.abs(rMinY - minY) < 0.25;
+        const hasBottomOuter = Math.abs(rMaxY - maxY) < 0.25;
+        const hasLeftOuter = Math.abs(rMinX - minX) < 0.25;
+        const hasRightOuter = Math.abs(rMaxX - maxX) < 0.25;
+
+        let acX = rMinX + rW * 0.5;
+        let acY = rMinY + 0.35;
+        let targetAngle = 90;
+        let maxRangeM = Math.min(rH * 0.85, 3.2);
+
+        if (hasTopOuter) {
+          acX = rMinX + rW * 0.5;
+          acY = rMinY + 0.35;
+          targetAngle = 90;
+          maxRangeM = Math.min(rH * 0.85, 3.2);
+        } else if (hasRightOuter && rW >= rH) {
+          acX = rMaxX - 0.35;
+          acY = rMinY + rH * 0.5;
+          targetAngle = 180;
+          maxRangeM = Math.min(rW * 0.85, 3.5);
+        } else if (hasBottomOuter) {
+          acX = rMinX + rW * 0.5;
+          acY = rMaxY - 0.35;
+          targetAngle = 270;
+          maxRangeM = Math.min(rH * 0.85, 3.2);
+        } else if (hasLeftOuter) {
+          acX = rMinX + 0.35;
+          acY = rMinY + rH * 0.5;
+          targetAngle = 0;
+          maxRangeM = Math.min(rW * 0.85, 3.5);
+        }
+
+        const placement: IAcPlacement = {
+          x: parseFloat(acX.toFixed(2)),
+          y: parseFloat(acY.toFixed(2)),
+          targetAngle,
+          label: `AC ${idx + 1}`,
+          btu: subBtu,
+          modelName: subModelName,
+          roomWidthM: rW,
+          roomHeightM: rH,
+          maxRangeM: parseFloat(maxRangeM.toFixed(1)),
+          roomName: `${idx + 1}-Xona (${subArea} m²)`,
+          roomAreaM2: subArea,
+        };
+
+        positions.push(placement);
+        roomBreakdown.push({
+          name: `${idx + 1}-Xona`,
+          areaM2: subArea,
+          btu: subBtu,
+          modelName: subModelName,
+          windowCount: winInRoom.length,
+          pos: placement,
+        });
+      });
+
+      return {
+        count: positions.length,
+        modelName: `${positions.length} dona split-sistema (Multisplit, ${totalBtuSum.toLocaleString()} BTU jami)`,
+        totalKw: (totalBtuSum / 3412).toFixed(1),
+        totalBtu: totalBtuSum,
+        positions,
+        roomBreakdown,
+      };
+    }
+  }
+
+  // 2. Yagona xona holati (Single Room)
+  let area = roomArea || 0;
+  if (area === 0) {
+    area = parseFloat(calculatePolygonArea(valid).toFixed(1));
+  }
+
+  const volume = Math.round(area * height);
   const baseWatts = volume * 40;
-  const windowBonus = windowsCount * 350;
+  const actualWindows = windows.length > 0 ? windows.length : windowsCount;
+  const windowBonus = actualWindows * 350;
   const solarFactor = isSunny ? 1.15 : 1.0;
   const totalWatts = Math.round((baseWatts + windowBonus) * solarFactor);
   const totalKw = (totalWatts / 1000).toFixed(1);
   const totalBtu = Math.round(totalWatts * 3.412);
 
   let count = 1;
-  let modelName = '09 model (9 000 BTU / 2.6 kW)';
+  let modelName = '1 dona 09-Model (9 000 BTU / 2.6 kW)';
 
   if (totalWatts <= 2800) {
     count = 1;
@@ -764,26 +950,43 @@ export function calculateAcCountAndPositions(
 
   const positions: IAcPlacement[] = [];
   const roomW = maxX - minX;
+  const roomH = maxY - minY;
+  const btuPerUnit = Math.round(totalBtu / count);
 
   if (count === 1) {
     positions.push({
-      x: minX + roomW / 2,
-      y: minY + 0.35,
+      x: parseFloat((minX + roomW / 2).toFixed(2)),
+      y: parseFloat((minY + 0.35).toFixed(2)),
       targetAngle: 90,
-      label: 'AC 1'
+      label: 'AC 1',
+      btu: btuPerUnit,
+      modelName,
+      roomWidthM: roomW,
+      roomHeightM: roomH,
+      maxRangeM: parseFloat((roomH * 0.85).toFixed(1)),
     });
   } else if (count === 2) {
     positions.push({
-      x: minX + roomW * 0.28,
-      y: minY + 0.35,
+      x: parseFloat((minX + roomW * 0.28).toFixed(2)),
+      y: parseFloat((minY + 0.35).toFixed(2)),
       targetAngle: 90,
-      label: 'AC 1'
+      label: 'AC 1',
+      btu: btuPerUnit,
+      modelName,
+      roomWidthM: roomW,
+      roomHeightM: roomH,
+      maxRangeM: parseFloat((roomH * 0.85).toFixed(1)),
     });
     positions.push({
-      x: minX + roomW * 0.72,
-      y: minY + 0.35,
+      x: parseFloat((minX + roomW * 0.72).toFixed(2)),
+      y: parseFloat((minY + 0.35).toFixed(2)),
       targetAngle: 90,
-      label: 'AC 2'
+      label: 'AC 2',
+      btu: btuPerUnit,
+      modelName,
+      roomWidthM: roomW,
+      roomHeightM: roomH,
+      maxRangeM: parseFloat((roomH * 0.85).toFixed(1)),
     });
   } else {
     const topCount = Math.ceil(count / 2);
@@ -792,20 +995,28 @@ export function calculateAcCountAndPositions(
     for (let i = 0; i < topCount; i++) {
       const step = roomW / (topCount + 1);
       positions.push({
-        x: minX + step * (i + 1),
-        y: minY + 0.35,
+        x: parseFloat((minX + step * (i + 1)).toFixed(2)),
+        y: parseFloat((minY + 0.35).toFixed(2)),
         targetAngle: 90,
-        label: `AC ${i + 1}`
+        label: `AC ${i + 1}`,
+        btu: btuPerUnit,
+        roomWidthM: roomW,
+        roomHeightM: roomH,
+        maxRangeM: parseFloat((roomH * 0.85).toFixed(1)),
       });
     }
 
     for (let i = 0; i < bottomCount; i++) {
       const step = roomW / (bottomCount + 1);
       positions.push({
-        x: minX + step * (i + 1),
-        y: maxY - 0.35,
+        x: parseFloat((minX + step * (i + 1)).toFixed(2)),
+        y: parseFloat((maxY - 0.35).toFixed(2)),
         targetAngle: 270,
-        label: `AC ${topCount + i + 1}`
+        label: `AC ${topCount + i + 1}`,
+        btu: btuPerUnit,
+        roomWidthM: roomW,
+        roomHeightM: roomH,
+        maxRangeM: parseFloat((roomH * 0.85).toFixed(1)),
       });
     }
   }

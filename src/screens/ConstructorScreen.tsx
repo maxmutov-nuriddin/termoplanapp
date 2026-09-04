@@ -163,17 +163,42 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
     if (area === 0) return { modelName: 'Hali chizilmadi', desc: 'Iltimos, avval xonani chizing.', countText: '0 dona', totalKw: '0 kW', placementNote: 'Xonani chizing', heatGainDesc: 'Deraza va maydon aniqlanmagan', positions: [] };
 
-    const acCalc = calculateAcCountAndPositions(roomPoints || [], area, height, windowCount, isSunny);
-    
-    const countText = `${acCalc.count} dona split-sistema${acCalc.count > 1 ? ' (xona bo‘ylab muvozanatli joylashuv)' : ''}`;
-    const desc = `${area} m² xona (${volume} m³ hajm) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz xona"} uchun optimal quvvat`;
-    const placementNote = windowCount > 0 
-      ? `Deraza (Oyna) yonidagi tashqi devorlarga (oynadan kiruvchi ${windowCount * 350}W issiqlikni birinchi bo'lib to'sadi)`
-      : `Xonaning uzoq devorlari markazlariga shiftdan 20 sm pastda o'rnatish`;
-    const heatGainDesc = `${volume} m³ hajm uchun issiqlik yuklamasi: ${acCalc.totalKw} kW (${acCalc.totalBtu.toLocaleString()} BTU/h)`;
+    const acCalc = calculateAcCountAndPositions(
+      roomPoints || [],
+      area,
+      height,
+      windowCount,
+      isSunny,
+      interiorWalls || [],
+      windows || [],
+      currentProject?.compassNorthAngle || 0
+    );
 
-    return { modelName: acCalc.modelName, countText, desc, totalKw: acCalc.totalKw, totalBtu: acCalc.totalBtu, placementNote, heatGainDesc, count: acCalc.count, positions: acCalc.positions };
-  }, [roomArea, roomPoints, windows, currentProject?.defaultCeilingHeight, currentProject?.compassNorthAngle]);
+    const isMultiRoom = acCalc.roomBreakdown && acCalc.roomBreakdown.length > 1;
+    const countText = isMultiRoom
+      ? `${acCalc.count} ta xona uchun ${acCalc.count} dona split-sistema (Multisplit)`
+      : `${acCalc.count} dona split-sistema${acCalc.count > 1 ? ' (xona bo‘ylab muvozanatli joylashuv)' : ''}`;
+    const desc = isMultiRoom
+      ? `${area} m² bino (${acCalc.roomBreakdown!.length} ta alohida xona) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz bino"} uchun optimal quvvat`
+      : `${area} m² xona (${volume} m³ hajm) va ${windowCount > 0 ? `${windowCount} ta deraza` : "derazasiz xona"} uchun optimal quvvat`;
+    const placementNote = windowCount > 0
+      ? `Har bir xonaning derazasi bor fasad devoriga (quyoshdan kiruvchi ${windowCount * 350}W issiqlikni to'sish uchun)`
+      : `Har bir xonaning optimal fasad devoriga shiftdan 15 sm pastda o'rnatish`;
+    const heatGainDesc = `${volume} m³ hajm uchun jami sovutish yuklamasi: ${acCalc.totalKw} kW (${acCalc.totalBtu.toLocaleString()} BTU/h)`;
+
+    return {
+      modelName: acCalc.modelName,
+      countText,
+      desc,
+      totalKw: acCalc.totalKw,
+      totalBtu: acCalc.totalBtu,
+      placementNote,
+      heatGainDesc,
+      count: acCalc.count,
+      positions: acCalc.positions,
+      roomBreakdown: acCalc.roomBreakdown,
+    };
+  }, [roomArea, roomPoints, windows, interiorWalls, currentProject?.defaultCeilingHeight, currentProject?.compassNorthAngle]);
 
   const handleAutoPlaceAc = () => {
     const count = recommendedAcInfo.count || 1;
@@ -349,6 +374,34 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               </View>
               <Text style={styles.acModelDesc}>{recommendedAcInfo.desc}</Text>
             </View>
+
+            {recommendedAcInfo.roomBreakdown && recommendedAcInfo.roomBreakdown.length > 1 && (
+              <View style={{ marginHorizontal: SPACING.md, marginTop: 10, padding: 12, backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.borderLight }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.text, marginBottom: 8 }}>
+                  🏢 Xonalar bo‘yicha alohida taqsimot ({recommendedAcInfo.roomBreakdown.length} ta zona):
+                </Text>
+                {recommendedAcInfo.roomBreakdown.map((rb, rIdx) => (
+                  <View
+                    key={rIdx}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingVertical: 6,
+                      borderBottomWidth: rIdx < recommendedAcInfo.roomBreakdown!.length - 1 ? 0.5 : 0,
+                      borderBottomColor: COLORS.borderLight,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' }}>
+                      {rb.name} ({rb.areaM2} m²) {rb.windowCount > 0 ? `• 🪟 ${rb.windowCount} ta oyna` : ''}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: COLORS.coolDark, fontWeight: '800' }}>
+                      {rb.modelName.split(' ')[0]} ({rb.btu.toLocaleString()} BTU)
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.acRulesGrid}>
               <View style={styles.acRuleItem}>

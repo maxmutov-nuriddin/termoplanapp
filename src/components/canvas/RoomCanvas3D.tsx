@@ -641,9 +641,18 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
 
   const acPositions3D = useMemo(() => {
     if (validPoints.length < 3) return [{ x: 1.2, y: 0.5, targetAngle: 90 }];
-    const res = calculateAcCountAndPositions(validPoints, 0, wallHeightM, windows ? windows.length : 0, false);
+    const res = calculateAcCountAndPositions(
+      validPoints,
+      0,
+      wallHeightM,
+      windows ? windows.length : 0,
+      false,
+      interiorWalls || [],
+      windows || [],
+      0
+    );
     return (res.positions && res.positions.length > 0) ? res.positions : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
-  }, [validPoints, wallHeightM, windows?.length]);
+  }, [validPoints, wallHeightM, windows, interiorWalls]);
 
   const handleZoomIn = () => {
     if (orbitRef.current) {
