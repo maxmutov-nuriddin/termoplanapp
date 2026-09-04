@@ -1133,6 +1133,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         width: 2.0,
         height: 0.9,
         rotation: snap.snapped ? snap.rotation : 0,
+        isHeatingProhibited: true,
+        isCoolingSensitive: false,
       };
       set((state) => ({
         furniture: [...state.furniture, newFurn],

@@ -28,7 +28,7 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   const isDanger = variant === 'danger';
   const isSecondary = variant === 'secondary';
 
-  const getGradientColors = () => {
+  const getGradientColors = (): [string, string] => {
     if (disabled) return [COLORS.border, COLORS.borderLight];
     if (isSecondary) return [COLORS.heat, COLORS.heatLight]; // Yoki heat, heatDark
     if (isDanger) return [COLORS.danger, '#B91C1C'];

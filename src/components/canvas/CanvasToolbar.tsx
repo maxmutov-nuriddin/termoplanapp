@@ -1,15 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { MousePointer2, Thermometer, Wind } from 'lucide-react-native';
+import { MousePointer2, Thermometer, Wind, Flame } from 'lucide-react-native';
 import { useCanvasStore } from '../../store/canvasStore';
 import { useShallow } from 'zustand/react/shallow';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../../theme';
 
 export const CanvasToolbar: React.FC = () => {
-  const { toolMode, setToolMode, seasonMode } = useCanvasStore(
+  const { selectedTool, setSelectedTool, seasonMode } = useCanvasStore(
     useShallow((s) => ({
-      toolMode: s.toolMode,
-      setToolMode: s.setToolMode,
+      selectedTool: s.selectedTool,
+      setSelectedTool: s.setSelectedTool,
       seasonMode: s.seasonMode,
     }))
   );
@@ -18,11 +18,11 @@ export const CanvasToolbar: React.FC = () => {
     <View style={styles.toolbarWrapper}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.toolbarContainer}>
         <TouchableOpacity
-          style={[styles.toolBtn, toolMode === 'select' && styles.toolBtnActive]}
-          onPress={() => setToolMode('select')}
+          style={[styles.toolBtn, selectedTool === 'select' && styles.toolBtnActive]}
+          onPress={() => setSelectedTool('select')}
         >
-          <MousePointer2 size={16} color={toolMode === 'select' ? COLORS.primary : COLORS.textSecondary} />
-          <Text style={[styles.toolText, toolMode === 'select' && styles.toolTextActive]}>Surish</Text>
+          <MousePointer2 size={16} color={selectedTool === 'select' ? COLORS.primary : COLORS.textSecondary} />
+          <Text style={[styles.toolText, selectedTool === 'select' && styles.toolTextActive]}>Surish</Text>
         </TouchableOpacity>
 
         <View style={styles.divider} />
@@ -30,28 +30,28 @@ export const CanvasToolbar: React.FC = () => {
         {seasonMode === 'winter' ? (
           <>
             <TouchableOpacity
-              style={[styles.toolBtn, toolMode === 'place_manifold' && styles.toolBtnActive]}
-              onPress={() => setToolMode('place_manifold')}
+              style={[styles.toolBtn, selectedTool === 'manifold' && styles.toolBtnActive]}
+              onPress={() => setSelectedTool('manifold')}
             >
-              <Thermometer size={16} color={toolMode === 'place_manifold' ? COLORS.heat : COLORS.textSecondary} />
-              <Text style={[styles.toolText, toolMode === 'place_manifold' && { color: COLORS.heat, fontWeight: '800' }]}>Kollektor</Text>
+              <Thermometer size={16} color={selectedTool === 'manifold' ? COLORS.heat : COLORS.textSecondary} />
+              <Text style={[styles.toolText, selectedTool === 'manifold' && { color: COLORS.heat, fontWeight: '800' }]}>Kollektor</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.toolBtn, toolMode === 'place_boiler' && styles.toolBtnActive]}
-              onPress={() => setToolMode('place_boiler')}
+              style={[styles.toolBtn, selectedTool === 'boiler' && styles.toolBtnActive]}
+              onPress={() => setSelectedTool('boiler')}
             >
-              <Flame size={16} color={toolMode === 'place_boiler' ? COLORS.heat : COLORS.textSecondary} />
-              <Text style={[styles.toolText, toolMode === 'place_boiler' && { color: COLORS.heat, fontWeight: '800' }]}>Kotyol</Text>
+              <Flame size={16} color={selectedTool === 'boiler' ? COLORS.heat : COLORS.textSecondary} />
+              <Text style={[styles.toolText, selectedTool === 'boiler' && { color: COLORS.heat, fontWeight: '800' }]}>Kotyol</Text>
             </TouchableOpacity>
           </>
         ) : (
           <TouchableOpacity
-            style={[styles.toolBtn, toolMode === 'place_ac' && styles.toolBtnActive]}
-            onPress={() => setToolMode('place_ac')}
+            style={[styles.toolBtn, selectedTool === 'ac' && styles.toolBtnActive]}
+            onPress={() => setSelectedTool('ac')}
           >
-            <Wind size={16} color={toolMode === 'place_ac' ? COLORS.cool : COLORS.textSecondary} />
-            <Text style={[styles.toolText, toolMode === 'place_ac' && { color: COLORS.cool, fontWeight: '800' }]}>Konditsioner</Text>
+            <Wind size={16} color={selectedTool === 'ac' ? COLORS.cool : COLORS.textSecondary} />
+            <Text style={[styles.toolText, selectedTool === 'ac' && { color: COLORS.cool, fontWeight: '800' }]}>Konditsioner</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

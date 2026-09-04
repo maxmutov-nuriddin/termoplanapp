@@ -468,7 +468,7 @@ export const ConstructorScreen: React.FC<{ navigation: any; route: any }> = ({ n
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: COLORS.warning }]} />
-                <Text style={styles.legendText}><Text style={{ fontWeight: '800', color: COLORS.warningDark || '#C2410C' }}>KL:</Text> Kollektor</Text>
+                <Text style={styles.legendText}><Text style={{ fontWeight: '800', color: COLORS.heatDark }}>KL:</Text> Kollektor</Text>
               </View>
             </View>
           </View>

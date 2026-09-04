@@ -1,6 +1,19 @@
-import { IPoint, IWall, IInteriorWall, IDoor, IWindow, IFurniture } from '../types';
-import { PIXELS_PER_METER, calculatePolygonArea } from './geometry';
+import { IPoint, IWall, IInteriorWall, IDoor, IWindow, IFurniture } from '../types/index';
 import polygonClipping from 'polygon-clipping';
+
+export const PIXELS_PER_METER = 40;
+
+export function calculatePolygonArea(points: IPoint[]): number {
+  if (!points || points.length < 3) return 0;
+  let area = 0;
+  const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += points[i].x * points[j].y;
+    area -= points[j].x * points[i].y;
+  }
+  return Math.abs(area / 2);
+}
 
 export interface PhysicalWallSpec {
   side: 'top' | 'bottom' | 'left' | 'right' | 'polygon_edge';
@@ -90,6 +103,31 @@ export function computeWallAzimuth(p1: IPoint, p2: IPoint, compassNorthAngle: nu
   return Math.round(outwardNormalDeg);
 }
 
+export function cleanCollinearVertices(poly: IPoint[]): IPoint[] {
+  if (poly.length < 3) return poly;
+  const pts = Math.hypot(poly[0].x - poly[poly.length - 1].x, poly[0].y - poly[poly.length - 1].y) < 1e-4
+    ? poly.slice(0, -1)
+    : [...poly];
+
+  let changed = true;
+  while (changed && pts.length >= 3) {
+    changed = false;
+    for (let i = 0; i < pts.length; i++) {
+      const prev = pts[(i - 1 + pts.length) % pts.length];
+      const curr = pts[i];
+      const next = pts[(i + 1) % pts.length];
+
+      const cross = (curr.x - prev.x) * (next.y - prev.y) - (curr.y - prev.y) * (next.x - prev.x);
+      if (Math.abs(cross) < 1e-4) {
+        pts.splice(i, 1);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return pts;
+}
+
 /**
  * 2. BOOLEAN SUBTRACTION: ISITILADIGAN MAYDONNI HISOBLASH (Multi-Island Support)
  */
@@ -101,18 +139,21 @@ export function getHeatableArea(
   if (valid.length < 3) return [];
 
   if (!exclusionPolygons || exclusionPolygons.length === 0) {
-    return [valid];
+    return [cleanCollinearVertices(valid)];
   }
 
-  const subject: any = [[valid.map((p) => [p.x, p.y])]];
+  const subject: any = [[ensureClosed(valid).map((p) => [p.x, p.y])]];
   const clippers: any[] = exclusionPolygons
     .filter((z) => z.points && z.points.length >= 3)
-    .map((z) => [[z.points.map((p) => [p.x, p.y])]]);
+    .map((z) => [[ensureClosed(z.points).map((p) => [p.x, p.y])]]);
 
   let current = subject;
   for (const clip of clippers) {
     try {
-      const diff = (polygonClipping as any).difference(current, clip);
+      const polyClip: any = (polygonClipping as any)?.default?.difference
+        ? (polygonClipping as any).default
+        : ((polygonClipping as any)?.difference ? polygonClipping : (polygonClipping as any)?.default || polygonClipping);
+      const diff = polyClip.difference(current, clip);
       if (diff && diff.length > 0) {
         current = diff;
       }
@@ -123,14 +164,17 @@ export function getHeatableArea(
 
   const islands: IPoint[][] = [];
   for (const poly of current) {
-    for (const ring of poly) {
-      if (ring && ring.length >= 3) {
-        islands.push(ring.map(([x, y]: any) => ({ x, y })));
+    // polygon-clipping da poly[0] - tashqi poligon chegarasi. poly[1..n] - teshiklar (mebel, to'siq).
+    if (poly && poly.length > 0 && poly[0] && poly[0].length >= 3) {
+      const ringPts = poly[0].map(([x, y]: any) => ({ x, y }));
+      const cleaned = cleanCollinearVertices(ringPts);
+      if (cleaned.length >= 3) {
+        islands.push(cleaned);
       }
     }
   }
 
-  return islands.length > 0 ? islands : [valid];
+  return islands.length > 0 ? islands : [cleanCollinearVertices(valid)];
 }
 
 /**
@@ -347,19 +391,61 @@ function computeOrthogonalPolygonInset(polygon: IPoint[], d: number): IPoint[] |
   return insetPts;
 }
 
+function distToSegmentM(p: IPoint, v: IPoint, w: IPoint): number {
+  const l2 = (v.x - w.x) * (v.x - w.x) + (v.y - w.y) * (v.y - w.y);
+  if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+}
+
+function distToPolyBoundaryM(p: IPoint, poly: IPoint[]): number {
+  let minD = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const p1 = poly[i];
+    const p2 = poly[(i + 1) % poly.length];
+    const d = distToSegmentM(p, p1, p2);
+    if (d < minD) minD = d;
+  }
+  return minD;
+}
+
+function isPointInPolyM(p: IPoint, poly: IPoint[]): boolean {
+  if (!p || !poly || poly.length < 3) return false;
+  let inside = false;
+  const n = poly.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = poly[i].x, yi = poly[i].y;
+    const xj = poly[j].x, yj = poly[j].y;
+    const intersect = ((yi > p.y) !== (yj > p.y)) &&
+      (p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 function generateInwardPolygonCoil(
   polygonMeters: IPoint[],
   manifoldPos: IPoint,
   stepM: number,
-  scalePx: number
+  scalePx: number,
+  doors: IDoor[] = [],
+  interiorWalls: IInteriorWall[] = [],
+  isRemote: boolean = false
 ): { feed: IPoint[]; ret: IPoint[]; lengthM: number } {
+  const cleaned = cleanCollinearVertices(polygonMeters);
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of polygonMeters) {
+  for (const p of cleaned) {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;
     if (p.y > maxY) maxY = p.y;
   }
+
+  const boxArea = (maxX - minX) * (maxY - minY);
+  const polyArea = calculatePolygonArea(cleaned);
+  const isRectangle = cleaned.length === 4 || Math.abs(boxArea - polyArea) < 0.20 * boxArea;
+  const isLShape = cleaned.length === 6;
 
   const mX = manifoldPos && Number.isFinite(manifoldPos.x)
     ? manifoldPos.x * scalePx
@@ -368,40 +454,89 @@ function generateInwardPolygonCoil(
     ? manifoldPos.y * scalePx
     : (minY + 0.35) * scalePx;
 
-  const boxArea = (maxX - minX) * (maxY - minY);
-  const polyArea = calculatePolygonArea(polygonMeters);
-  const isRectangle = polygonMeters.length === 4 && Math.abs(boxArea - polyArea) < 0.05 * boxArea;
-  const isLShape = polygonMeters.length === 6;
+  // Eshik orqali o'tish nuqtasi (Doorway threshold)
+  let doorPt: IPoint | null = null;
+  if (isRemote) {
+    let bestDist = Infinity;
+    for (const d of doors || []) {
+      if (d && d.position && Number.isFinite(d.position.x)) {
+        const dist = distToPolyBoundaryM(d.position, cleaned);
+        if (dist < 1.4 && dist < bestDist) {
+          bestDist = dist;
+          doorPt = d.position;
+        }
+      }
+    }
+  }
+
+  const dX = doorPt ? doorPt.x * scalePx : (minX + 0.5) * scalePx;
+  const dY = doorPt ? doorPt.y * scalePx : (minY + 0.5) * scalePx;
+
+  const margin = 0.26 * scalePx;
+  const p = stepM * scalePx;
+
+  let xL1 = minX * scalePx + margin;
+  let xR1 = maxX * scalePx - margin;
+  let yT1 = minY * scalePx + margin;
+  let yB1 = maxY * scalePx - margin;
+
+  let xL2 = xL1 + p;
+  let xR2 = xR1 - p;
+  let yT2 = yT1 + p;
+  let yB2 = yB1 - p;
+
+  const feed: IPoint[] = [];
+  const ret: IPoint[] = [];
+
+  // Trubalarning kirish va tugash nuqtasi:
+  // 1-xona: Kollektor/kotyol shkafi qayerda bo'lsa o'sha yerda tugaydi (doyimgi holati)
+  // 2-xona va boshqalar: 2 ta truba devorga qarab tugab qoladi (huddi 1-xona kabi, ustma-ust chiqmasdan)
+  if (!isRemote) {
+    const entryX = Math.max(xL1, Math.min(xR1, mX));
+    feed.push({ x: entryX, y: yT1 });
+    ret.push({ x: entryX, y: yT2 });
+  } else {
+    if (doorPt && Math.abs(dX - minX * scalePx) < 0.6 * scalePx) {
+      // Chap devorga qarab tugaydi
+      feed.push({ x: minX * scalePx + 4, y: yT1 });
+      ret.push({ x: minX * scalePx + 4, y: yT2 });
+    } else if (doorPt && Math.abs(dX - maxX * scalePx) < 0.6 * scalePx) {
+      // O'ng devorga qarab tugaydi
+      feed.push({ x: maxX * scalePx - 4, y: yT1 });
+      ret.push({ x: maxX * scalePx - 4, y: yT2 });
+    } else if (doorPt && Math.abs(dY - minY * scalePx) < 0.6 * scalePx) {
+      // Yuqori devorga qarab tugaydi
+      const entryX = Math.max(xL1, Math.min(xR1, dX));
+      feed.push({ x: entryX, y: minY * scalePx + 4 });
+      ret.push({ x: entryX + p, y: minY * scalePx + 4 });
+    } else if (doorPt && Math.abs(dY - maxY * scalePx) < 0.6 * scalePx) {
+      // Quyi devorga qarab tugaydi
+      const entryX = Math.max(xL1, Math.min(xR1, dX));
+      feed.push({ x: entryX, y: maxY * scalePx - 4 });
+      ret.push({ x: entryX + p, y: maxY * scalePx - 4 });
+    } else {
+      // Standart devor tomoni
+      feed.push({ x: minX * scalePx + 4, y: yT1 });
+      ret.push({ x: minX * scalePx + 4, y: yT2 });
+    }
+  }
 
   // 1. L-Shaklli xonalar uchun maxsus 6-tomonli uzluksiz Two-Lane Bifilar Spiral
   if (isLShape) {
-    const xVals = [...new Set(polygonMeters.map(p => p.x))].sort((a, b) => a - b);
-    const yVals = [...new Set(polygonMeters.map(p => p.y))].sort((a, b) => a - b);
+    const xVals = [...new Set(cleaned.map(pt => pt.x))].sort((a, b) => a - b);
+    const yVals = [...new Set(cleaned.map(pt => pt.y))].sort((a, b) => a - b);
     const midX = xVals.find(x => x > minX && x < maxX) || (minX + maxX) / 2;
     const midY = yVals.find(y => y > minY && y < maxY) || (minY + maxY) / 2;
 
-    const p = 0.18 * scalePx;
-    const margin = 0.28 * scalePx;
-
-    let xL1 = minX * scalePx + margin;
     let xR1_top = maxX * scalePx - margin;
     let yB1_top = midY * scalePx - margin;
     let xR1_bot = midX * scalePx - margin;
     let yB1_bot = maxY * scalePx - margin;
-    let yT1 = minY * scalePx + margin;
 
-    let xL2 = xL1 + p;
     let xR2_top = xR1_top - p;
     let yB2_top = yB1_top - p;
     let xR2_bot = xR1_bot - p;
     let yB2_bot = yB1_bot - p;
-    let yT2 = yT1 + p;
-
-    const feed: IPoint[] = [];
-    const ret: IPoint[] = [];
-
-    feed.push({ x: mX, y: yT1 });
-    ret.push({ x: mX, y: yT2 });
 
     while (xR2_bot - xL2 >= 2.0 * p && yB2_top - yT2 >= 2.0 * p) {
       feed.push({ x: xR1_top, y: yT1 });
@@ -443,22 +578,22 @@ function generateInwardPolygonCoil(
     feed.push({ x: lastR.x, y: lastR.y });
 
     const returnOutward = ret.reverse();
-    const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
+    const lengthM = parseFloat((polyArea / stepM).toFixed(1));
 
     return { feed, ret: returnOutward, lengthM };
   }
 
-  // 2. Boshqa murakkab poligonlar uchun
+  // 2. Boshqa no-to'g'ri murakkab poligonlar uchun (Strictly Orthogonal transitions)
   if (!isRectangle) {
     const rings: Array<Array<{ x: number; y: number }>> = [];
-    for (let d = 0.28; d <= 2.5; d += 0.18) {
-      const r = computeOrthogonalPolygonInset(polygonMeters, d);
+    for (let d = 0.28; d <= 2.5; d += stepM) {
+      const r = computeOrthogonalPolygonInset(cleaned, d);
       if (!r) break;
       let isValid = true;
       for (let k = 0; k < r.length; k++) {
         const nextK = (k + 1) % r.length;
-        const origDx = polygonMeters[nextK].x - polygonMeters[k].x;
-        const origDy = polygonMeters[nextK].y - polygonMeters[k].y;
+        const origDx = cleaned[nextK].x - cleaned[k].x;
+        const origDy = cleaned[nextK].y - cleaned[k].y;
         const newDx = r[nextK].x - r[k].x;
         const newDy = r[nextK].y - r[k].y;
         if (origDx * newDx < -0.01 || origDy * newDy < -0.01) {
@@ -467,15 +602,12 @@ function generateInwardPolygonCoil(
         }
       }
       if (!isValid) break;
-      rings.push(r.map(p => ({ x: p.x * scalePx, y: p.y * scalePx })));
+      rings.push(r.map(pt => ({ x: pt.x * scalePx, y: pt.y * scalePx })));
     }
 
     if (rings.length >= 2) {
-      const polyFeed: IPoint[] = [];
-      const polyRet: IPoint[] = [];
-
-      polyFeed.push({ x: mX, y: rings[0][0].y });
-      polyRet.push({ x: mX, y: rings[1][0].y });
+      const polyFeed: IPoint[] = [...feed];
+      const polyRet: IPoint[] = [...ret];
 
       const pairCount = Math.floor(rings.length / 2);
       for (let k = 0; k < pairCount; k++) {
@@ -491,7 +623,9 @@ function generateInwardPolygonCoil(
           const nextF = rings[2 * (k + 1)];
           const nextR = rings[2 * (k + 1) + 1];
           polyFeed.push({ x: nextF[0].x, y: rF[rF.length - 1].y });
+          polyFeed.push(nextF[0]);
           polyRet.push({ x: nextR[0].x, y: rR[rR.length - 1].y });
+          polyRet.push(nextR[0]);
         }
       }
 
@@ -501,46 +635,22 @@ function generateInwardPolygonCoil(
       polyFeed.push({ x: lastR.x, y: lastR.y });
 
       const polyRetOutward = polyRet.reverse();
-
-      const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
+      const lengthM = parseFloat((polyArea / stepM).toFixed(1));
       return { feed: polyFeed, ret: polyRetOutward, lengthM };
     }
   }
 
-  // 2. Standart to'rtburchak xonalar uchun Two-Lane Bifilar Spiral
-  const margin = 0.28 * scalePx;
-  const p = 0.18 * scalePx; // 18sm quvur qadami
-
-  let xL1 = minX * scalePx + margin;
-  let xR1 = maxX * scalePx - margin;
-  let yT1 = minY * scalePx + margin;
-  let yB1 = maxY * scalePx - margin;
-
-  let xL2 = xL1 + p;
-  let xR2 = xR1 - p;
-  let yT2 = yT1 + p;
-  let yB2 = yB1 - p;
-
-  const feed: IPoint[] = [];
-  const ret: IPoint[] = [];
-
-  // 1. Kollektor (KL) shkafiga parallel ulanish (mutlaqo 0 kesishuv)
-  feed.push({ x: mX, y: yT1 });
-  ret.push({ x: mX, y: yT2 });
-
-  // 2. Parallel spiral qavatlari (Two-Lane Bifilar Spiral)
-  while (xR2 - xL2 >= 2.5 * p && yB2 - yT2 >= 2.5 * p) {
+  // 3. Standart to'rtburchak xonalar uchun Two-Lane Bifilar Spiral
+  while (xR2 - xL2 >= 2.0 * p && yB2 - yT2 >= 2.0 * p) {
     feed.push({ x: xR1, y: yT1 });
     ret.push({ x: xR2, y: yT2 });
 
     feed.push({ x: xR1, y: yB1 });
     ret.push({ x: xR2, y: yB2 });
 
-    // Bottom side: o'ngdan chapga to'liq devor bo'yigacha
     feed.push({ x: xL1, y: yB1 });
     ret.push({ x: xL2, y: yB2 });
 
-    // Left side: pastdan keyingi ichki qavat tepasigacha
     feed.push({ x: xL1, y: yT1 + 2 * p });
     ret.push({ x: xL2, y: yT2 + 2 * p });
 
@@ -555,16 +665,13 @@ function generateInwardPolygonCoil(
     yB2 -= 2 * p;
   }
 
-  // 3. Markaziy 180° hairpin burilish (Feed -> Return)
   const lastF = feed[feed.length - 1];
   const lastR = ret[ret.length - 1];
   feed.push({ x: lastF.x + p, y: lastF.y });
   feed.push({ x: lastR.x, y: lastR.y });
 
-  // 4. Return quvurini teskari (outward) tartibda kollektorga qaytarish (tugash nuqtasi)
   const returnOutward = ret.reverse();
-
-  const lengthM = parseFloat((polyArea / 0.18).toFixed(1));
+  const lengthM = parseFloat((polyArea / stepM).toFixed(1));
 
   return { feed, ret: returnOutward, lengthM };
 }
@@ -801,8 +908,10 @@ export function calculateMasterPlumberPlan(
   if (boilerPos && Number.isFinite(boilerPos.x) && Number.isFinite(boilerPos.y)) {
     const bX = boilerPos.x * scale;
     const bY = boilerPos.y * scale;
-    boilerSupplyMain = `${bX.toFixed(1)},${bY.toFixed(1)} ${(bX + (mX - bX) * 0.5).toFixed(1)},${bY.toFixed(1)} ${(bX + (mX - bX) * 0.5).toFixed(1)},${mY.toFixed(1)} ${mX.toFixed(1)},${mY.toFixed(1)}`;
-    boilerReturnMain = `${mX.toFixed(1)},${(mY + 8).toFixed(1)} ${(bX + (mX - bX) * 0.5 + 8).toFixed(1)},${(mY + 8).toFixed(1)} ${(bX + (mX - bX) * 0.5 + 8).toFixed(1)},${(bY + 8).toFixed(1)} ${bX.toFixed(1)},${(bY + 8).toFixed(1)}`;
+    // Tashqi devordan tashqariga aslo chiqmaydi — devor ichidan / perimetr o'qi bo'ylab o'tadi
+    const trackX = Math.max(minX * scale + 4, Math.min(maxX * scale - 4, Math.min(bX, mX)));
+    boilerSupplyMain = `${bX.toFixed(1)},${bY.toFixed(1)} ${trackX.toFixed(1)},${bY.toFixed(1)} ${trackX.toFixed(1)},${mY.toFixed(1)} ${mX.toFixed(1)},${mY.toFixed(1)}`;
+    boilerReturnMain = `${mX.toFixed(1)},${(mY + 6).toFixed(1)} ${(trackX + 6).toFixed(1)},${(mY + 6).toFixed(1)} ${(trackX + 6).toFixed(1)},${(bY + 6).toFixed(1)} ${bX.toFixed(1)},${(bY + 6).toFixed(1)}`;
   }
 
   // 2. BARCHA ISTISNO ZONALAR (Mebel, Istisno joylar va Ichki devorlar)
@@ -811,21 +920,29 @@ export function calculateMasterPlumberPlan(
   // Ichki devorlar (to'siqlar) bo'ylab quvur o'tmasligi uchun to'siq poligonlari
   for (const iw of interiorWalls || []) {
     if (iw && iw.startPoint && iw.endPoint) {
-      const halfThick = Math.max(0.08, (iw.thicknessM || 0.12) / 2 + 0.08);
+      const halfThick = Math.max(0.06, (iw.thicknessM || 0.12) / 2);
       const dx = iw.endPoint.x - iw.startPoint.x;
       const dy = iw.endPoint.y - iw.startPoint.y;
       const len = Math.hypot(dx, dy);
       if (len > 0.1) {
         const nx = (-dy / len) * halfThick;
         const ny = (dx / len) * halfThick;
-        const ex = (dx / len) * 0.04;
-        const ey = (dy / len) * 0.04;
+        const ux = dx / len;
+        const uy = dy / len;
+
+        // Faqat tashqi devorlarga tutashgan uchlarini ozgina (0.15m) cho'zamiz (ichki T-junction xonalarni teshib burchak hosil qilmasligi uchun)
+        const isStartNearOuter = (iw.startPoint.x <= minX + 0.2 || iw.startPoint.x >= maxX - 0.2 || iw.startPoint.y <= minY + 0.2 || iw.startPoint.y >= maxY - 0.2);
+        const isEndNearOuter   = (iw.endPoint.x <= minX + 0.2 || iw.endPoint.x >= maxX - 0.2 || iw.endPoint.y <= minY + 0.2 || iw.endPoint.y >= maxY - 0.2);
+
+        const exStart = isStartNearOuter ? 0.15 : 0.0;
+        const exEnd   = isEndNearOuter   ? 0.15 : 0.0;
+
         combinedExcludes.push({
           points: [
-            { x: iw.startPoint.x - ex + nx, y: iw.startPoint.y - ey + ny },
-            { x: iw.endPoint.x + ex + nx, y: iw.endPoint.y + ey + ny },
-            { x: iw.endPoint.x + ex - nx, y: iw.endPoint.y + ey - ny },
-            { x: iw.startPoint.x - ex - nx, y: iw.startPoint.y - ey - ny },
+            { x: iw.startPoint.x - ux * exStart + nx, y: iw.startPoint.y - uy * exStart + ny },
+            { x: iw.endPoint.x   + ux * exEnd   + nx, y: iw.endPoint.y   + uy * exEnd   + ny },
+            { x: iw.endPoint.x   + ux * exEnd   - nx, y: iw.endPoint.y   + uy * exEnd   - ny },
+            { x: iw.startPoint.x - ux * exStart - nx, y: iw.startPoint.y - uy * exStart - ny },
           ],
         });
       }
@@ -855,15 +972,32 @@ export function calculateMasterPlumberPlan(
   let totalHeatedAreaM2 = 0;
   let isIntersectionFree = true;
 
+  // Kollektor qaysi xonada ekanligini aniqlash (eng yaqin masofadagi orol)
+  let manifoldIslandIdx = 0;
+  let minManifoldDist = Infinity;
+  for (let i = 0; i < heatableIslands.length; i++) {
+    const island = heatableIslands[i];
+    let minD = Infinity;
+    for (const p of island) {
+      const d = Math.hypot(p.x - manifoldPos.x, p.y - manifoldPos.y);
+      if (d < minD) minD = d;
+    }
+    if (minD < minManifoldDist) {
+      minManifoldDist = minD;
+      manifoldIslandIdx = i;
+    }
+  }
+
   for (let idx = 0; idx < heatableIslands.length; idx++) {
     const island = heatableIslands[idx];
     const islandArea = parseFloat(calculatePolygonArea(island).toFixed(1));
-    if (islandArea < 1.0) continue;
+    if (islandArea < 0.4) continue;
 
+    const isRemote = heatableIslands.length > 1 && idx !== manifoldIslandIdx;
     const stepM = 0.15;
     const stepSm = Math.round(stepM * 100);
 
-    const { feed, ret, lengthM } = generateInwardPolygonCoil(island, manifoldPos, stepM, scale);
+    const { feed, ret, lengthM } = generateInwardPolygonCoil(island, manifoldPos, stepM, scale, doors, interiorWalls, isRemote);
 
     const heatLoadWatt = islandArea * 75;
     const flowRateL_min = parseFloat((heatLoadWatt / (1.163 * 10 * 60)).toFixed(2));

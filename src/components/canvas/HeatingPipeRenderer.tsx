@@ -192,12 +192,9 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
   const renderedCircuits = useMemo(() => {
     if (valid.length < 3) return [];
 
-    // Agar xonada ichki devorlar (to'siqlar) yoki istisno zonalar bo'lsa,
-    // Master Plumber dvigateli orqali ichki devorlarni hisobga olgan va ularni kesib o'tmaydigan konturlar olinadi
-    if ((interiorWalls && interiorWalls.length > 0) || (excludedZones && excludedZones.length > 0)) {
-      if (circuits && circuits.length > 0) {
-        return circuits;
-      }
+    // Master Plumber dvigateli hisoblagan toza va to'g'ri konturlarni ishlatamiz
+    if (circuits && circuits.length > 0) {
+      return circuits;
     }
 
     const boxArea = (maxX - minX) * (maxY - minY);
@@ -335,7 +332,9 @@ const HeatingPipeRendererComponent: React.FC<HeatingPipeRendererProps> = ({
             const nextF = rings[2 * (k + 1)];
             const nextR = rings[2 * (k + 1) + 1];
             polyFeed.push({ x: nextF[0].x, y: rF[rF.length - 1].y });
+            polyFeed.push(nextF[0]);
             polyRet.push({ x: nextR[0].x, y: rR[rR.length - 1].y });
+            polyRet.push(nextR[0]);
           }
         }
 

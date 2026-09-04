@@ -807,7 +807,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
             maxPolarAngle={Math.PI / 2 - 0.02}
             touches={{
               ONE: THREE.TOUCH.ROTATE,
-              TWO: THREE.TOUCH.DOLLY,
+              TWO: THREE.TOUCH.DOLLY_PAN,
             }}
           />
         </Suspense>

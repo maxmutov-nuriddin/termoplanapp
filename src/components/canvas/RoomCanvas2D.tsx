@@ -723,7 +723,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
             {showPipesAndAirflow && !isReshapingRoom && seasonMode === 'winter' && validRoomPoints.length >= 3 && (
               <HeatingPipeRenderer
                 roomPoints={validRoomPoints}
-                manifoldPos={manifoldPosition || { x: 0.8, y: 0.8 }}
+                manifoldPos={manifoldPosition || (validRoomPoints.length >= 3 ? { x: validRoomPoints[0].x + 0.35, y: validRoomPoints[0].y + 0.35 } : null)}
                 boilerPos={boilerPosition}
                 interiorWalls={interiorWalls || []}
                 doors={doors || []}
