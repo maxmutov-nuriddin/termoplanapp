@@ -618,7 +618,8 @@ function generateInwardPolygonCoil(
     const polyMM = cleaned.map(pt => [Math.round(pt.x * 1000), Math.round(pt.y * 1000)]);
     polyMM.push([...polyMM[0]]);
     const rings: Array<Array<{ x: number; y: number }>> = [];
-    for (let d = stepM * 0.9; d <= 5.0; d += stepM) {
+    const marginM = 0.26;
+    for (let d = marginM; d <= 5.0; d += stepM) {
       const offset = new Offset();
       const res = offset.data(polyMM).padding(Math.round(d * 1000));
       if (!res || !res.length || res[0].length < 3) break;
@@ -630,16 +631,30 @@ function generateInwardPolygonCoil(
         pts.pop();
       }
       if (pts.length >= 3) {
+        const ringArea = calculatePolygonArea(pts.map((p: { x: number; y: number }) => ({ x: p.x / scalePx, y: p.y / scalePx })));
+        if (ringArea < 0.15) break;
         rings.push(pts);
       }
     }
 
     if (rings.length >= 2) {
-      const entryPtPx = feed[0];
+      let wallPoint = feed[0];
+      if (doorPt) {
+        if (Math.abs(dX - minX * scalePx) < 0.6 * scalePx) {
+          wallPoint = { x: minX * scalePx + 4, y: Math.max(minY * scalePx + margin, Math.min(maxY * scalePx - margin, dY)) };
+        } else if (Math.abs(dX - maxX * scalePx) < 0.6 * scalePx) {
+          wallPoint = { x: maxX * scalePx - 4, y: Math.max(minY * scalePx + margin, Math.min(maxY * scalePx - margin, dY)) };
+        } else if (Math.abs(dY - minY * scalePx) < 0.6 * scalePx) {
+          wallPoint = { x: Math.max(minX * scalePx + margin, Math.min(maxX * scalePx - margin, dX)), y: minY * scalePx + 4 };
+        } else if (Math.abs(dY - maxY * scalePx) < 0.6 * scalePx) {
+          wallPoint = { x: Math.max(minX * scalePx + margin, Math.min(maxX * scalePx - margin, dX)), y: maxY * scalePx - 4 };
+        }
+      }
+
       const aligned = rings.map(r => {
         let bestIdx = 0, bestD = Infinity;
         for (let i = 0; i < r.length; i++) {
-          const d = Math.hypot(r[i].x - entryPtPx.x, r[i].y - entryPtPx.y);
+          const d = Math.hypot(r[i].x - wallPoint.x, r[i].y - wallPoint.y);
           if (d < bestD) {
             bestD = d;
             bestIdx = i;
@@ -648,15 +663,19 @@ function generateInwardPolygonCoil(
         let res = [...r.slice(bestIdx), ...r.slice(0, bestIdx)];
         if (
           res.length >= 3 &&
-          Math.hypot(res[1].x - entryPtPx.x, res[1].y - entryPtPx.y) <
-            Math.hypot(res[res.length - 1].x - entryPtPx.x, res[res.length - 1].y - entryPtPx.y)
+          Math.hypot(res[1].x - wallPoint.x, res[1].y - wallPoint.y) <
+            Math.hypot(res[res.length - 1].x - wallPoint.x, res[res.length - 1].y - wallPoint.y)
         ) {
           res = [res[0], ...res.slice(1).reverse()];
         }
         return res;
       });
 
-      const polyFeed: IPoint[] = [entryPtPx];
+      const isVertWall = !doorPt || Math.abs(dX - minX * scalePx) < 0.6 * scalePx || Math.abs(dX - maxX * scalePx) < 0.6 * scalePx;
+      const feedWallPt = isVertWall ? { x: wallPoint.x, y: aligned[0][0].y } : { x: aligned[0][0].x, y: wallPoint.y };
+      const retWallPt = isVertWall ? { x: wallPoint.x, y: aligned[1][0].y } : { x: aligned[1][0].x, y: wallPoint.y };
+
+      const polyFeed: IPoint[] = [feedWallPt];
       const polyRet: IPoint[] = [];
 
       const pairCount = Math.floor(aligned.length / 2);
@@ -703,7 +722,7 @@ function generateInwardPolygonCoil(
 
       const polyRetOutward = polyRet.reverse();
       if (polyRetOutward.length > 0) {
-        polyRetOutward.push({ x: entryPtPx.x, y: aligned[1][0].y });
+        polyRetOutward.push(retWallPt);
       }
 
       const lengthM = parseFloat((polyArea / stepM).toFixed(1));
@@ -1002,7 +1021,7 @@ export function calculateMasterPlumberPlan(
   // Ichki devorlar (to'siqlar) bo'ylab quvur o'tmasligi uchun to'siq poligonlari
   for (const iw of interiorWalls || []) {
     if (iw && iw.startPoint && iw.endPoint) {
-      const halfThick = Math.max(0.06, (iw.thicknessM || 0.12) / 2);
+      const halfThick = Math.max(0.08, (iw.thicknessM || 0.12) / 2 + 0.02);
       const dx = iw.endPoint.x - iw.startPoint.x;
       const dy = iw.endPoint.y - iw.startPoint.y;
       const len = Math.hypot(dx, dy);
