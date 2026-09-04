@@ -244,6 +244,14 @@ function findClosestPointIdx(pt: IPoint, ring: IPoint[]): number {
  * BOSQICH E1: KESISHMASLIK KAFOLATI VA VALIDATSIYASI (Zero Self-Intersection)
  */
 function segmentsIntersect(p1: IPoint, p2: IPoint, p3: IPoint, p4: IPoint): boolean {
+  if (
+    Math.hypot(p1.x - p3.x, p1.y - p3.y) < 0.1 ||
+    Math.hypot(p1.x - p4.x, p1.y - p4.y) < 0.1 ||
+    Math.hypot(p2.x - p3.x, p2.y - p3.y) < 0.1 ||
+    Math.hypot(p2.x - p4.x, p2.y - p4.y) < 0.1
+  ) {
+    return false;
+  }
   function ccw(A: IPoint, B: IPoint, C: IPoint) {
     return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x);
   }
@@ -251,14 +259,23 @@ function segmentsIntersect(p1: IPoint, p2: IPoint, p3: IPoint, p4: IPoint): bool
 }
 
 export function validateNoSelfIntersection(points: IPoint[]): boolean {
-  const n = points.length;
+  const filtered: IPoint[] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (
+      filtered.length === 0 ||
+      Math.hypot(points[i].x - filtered[filtered.length - 1].x, points[i].y - filtered[filtered.length - 1].y) > 0.01
+    ) {
+      filtered.push(points[i]);
+    }
+  }
+  const n = filtered.length;
   for (let i = 0; i < n - 1; i++) {
-    const s1_p1 = points[i];
-    const s1_p2 = points[i + 1];
+    const s1_p1 = filtered[i];
+    const s1_p2 = filtered[i + 1];
     for (let j = i + 2; j < n - 1; j++) {
       if (Math.abs(i - j) <= 1) continue;
-      const s2_p1 = points[j];
-      const s2_p2 = points[j + 1];
+      const s2_p1 = filtered[j];
+      const s2_p2 = filtered[j + 1];
       if (segmentsIntersect(s1_p1, s1_p2, s2_p1, s2_p2)) {
         return false;
       }
@@ -444,8 +461,21 @@ function generateInwardPolygonCoil(
 
   const boxArea = (maxX - minX) * (maxY - minY);
   const polyArea = calculatePolygonArea(cleaned);
-  const isRectangle = cleaned.length === 4 || Math.abs(boxArea - polyArea) < 0.20 * boxArea;
-  const isLShape = cleaned.length === 6;
+
+  let allOrthogonal = true;
+  for (let i = 0; i < cleaned.length; i++) {
+    const p1 = cleaned[i];
+    const p2 = cleaned[(i + 1) % cleaned.length];
+    const dx = Math.abs(p2.x - p1.x);
+    const dy = Math.abs(p2.y - p1.y);
+    if (dx > 0.05 && dy > 0.05) {
+      allOrthogonal = false;
+      break;
+    }
+  }
+
+  const isRectangle = cleaned.length === 4 && allOrthogonal && Math.abs(boxArea - polyArea) < 0.05 * boxArea;
+  const isLShape = cleaned.length === 6 && allOrthogonal;
 
   const mX = manifoldPos && Number.isFinite(manifoldPos.x)
     ? manifoldPos.x * scalePx
@@ -583,60 +613,112 @@ function generateInwardPolygonCoil(
     return { feed, ret: returnOutward, lengthM };
   }
 
-  // 2. Boshqa no-to'g'ri murakkab poligonlar uchun (Strictly Orthogonal transitions)
+  // 2. Qiya devorli yoki no-to'rtburchak poligonlar uchun Concentric Offset Inward Spiral (polygon-offset)
   if (!isRectangle) {
+    const polyMM = cleaned.map(pt => [Math.round(pt.x * 1000), Math.round(pt.y * 1000)]);
+    polyMM.push([...polyMM[0]]);
     const rings: Array<Array<{ x: number; y: number }>> = [];
-    for (let d = 0.28; d <= 2.5; d += stepM) {
-      const r = computeOrthogonalPolygonInset(cleaned, d);
-      if (!r) break;
-      let isValid = true;
-      for (let k = 0; k < r.length; k++) {
-        const nextK = (k + 1) % r.length;
-        const origDx = cleaned[nextK].x - cleaned[k].x;
-        const origDy = cleaned[nextK].y - cleaned[k].y;
-        const newDx = r[nextK].x - r[k].x;
-        const newDy = r[nextK].y - r[k].y;
-        if (origDx * newDx < -0.01 || origDy * newDy < -0.01) {
-          isValid = false;
-          break;
-        }
+    for (let d = stepM * 0.9; d <= 5.0; d += stepM) {
+      const offset = new Offset();
+      const res = offset.data(polyMM).padding(Math.round(d * 1000));
+      if (!res || !res.length || res[0].length < 3) break;
+      const pts = res[0].map((pt: [number, number]) => ({
+        x: (pt[0] / 1000) * scalePx,
+        y: (pt[1] / 1000) * scalePx
+      }));
+      if (Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1) {
+        pts.pop();
       }
-      if (!isValid) break;
-      rings.push(r.map(pt => ({ x: pt.x * scalePx, y: pt.y * scalePx })));
+      if (pts.length >= 3) {
+        rings.push(pts);
+      }
     }
 
     if (rings.length >= 2) {
-      const polyFeed: IPoint[] = [...feed];
-      const polyRet: IPoint[] = [...ret];
+      const entryPtPx = feed[0];
+      const aligned = rings.map(r => {
+        let bestIdx = 0, bestD = Infinity;
+        for (let i = 0; i < r.length; i++) {
+          const d = Math.hypot(r[i].x - entryPtPx.x, r[i].y - entryPtPx.y);
+          if (d < bestD) {
+            bestD = d;
+            bestIdx = i;
+          }
+        }
+        let res = [...r.slice(bestIdx), ...r.slice(0, bestIdx)];
+        if (
+          res.length >= 3 &&
+          Math.hypot(res[1].x - entryPtPx.x, res[1].y - entryPtPx.y) <
+            Math.hypot(res[res.length - 1].x - entryPtPx.x, res[res.length - 1].y - entryPtPx.y)
+        ) {
+          res = [res[0], ...res.slice(1).reverse()];
+        }
+        return res;
+      });
 
-      const pairCount = Math.floor(rings.length / 2);
+      const polyFeed: IPoint[] = [entryPtPx];
+      const polyRet: IPoint[] = [];
+
+      const pairCount = Math.floor(aligned.length / 2);
       for (let k = 0; k < pairCount; k++) {
-        const rF = rings[2 * k];
-        const rR = rings[2 * k + 1];
+        const rF = aligned[2 * k];
+        const rR = aligned[2 * k + 1];
 
         for (let i = 0; i < rF.length; i++) {
-          polyFeed.push(rF[i]);
-          polyRet.push(rR[i]);
+          const last = polyFeed[polyFeed.length - 1];
+          if (!last || Math.hypot(last.x - rF[i].x, last.y - rF[i].y) > 0.5) {
+            polyFeed.push(rF[i]);
+          }
+        }
+        for (let i = 0; i < rR.length; i++) {
+          const last = polyRet[polyRet.length - 1];
+          if (!last || Math.hypot(last.x - rR[i].x, last.y - rR[i].y) > 0.5) {
+            polyRet.push(rR[i]);
+          }
         }
 
         if (k < pairCount - 1) {
-          const nextF = rings[2 * (k + 1)];
-          const nextR = rings[2 * (k + 1) + 1];
-          polyFeed.push({ x: nextF[0].x, y: rF[rF.length - 1].y });
+          const nextF = aligned[2 * (k + 1)];
+          const nextR = aligned[2 * (k + 1) + 1];
           polyFeed.push(nextF[0]);
-          polyRet.push({ x: nextR[0].x, y: rR[rR.length - 1].y });
           polyRet.push(nextR[0]);
         }
       }
 
-      const lastF = polyFeed[polyFeed.length - 1];
-      const lastR = polyRet[polyRet.length - 1];
-      polyFeed.push({ x: lastF.x, y: lastR.y });
-      polyFeed.push({ x: lastR.x, y: lastR.y });
+      if (aligned.length % 2 === 1 && aligned.length > 1) {
+        const innerRing = aligned[aligned.length - 1];
+        polyFeed.push(innerRing[0]);
+        for (let i = 0; i < innerRing.length; i++) {
+          const last = polyFeed[polyFeed.length - 1];
+          if (!last || Math.hypot(last.x - innerRing[i].x, last.y - innerRing[i].y) > 0.5) {
+            polyFeed.push(innerRing[i]);
+          }
+        }
+      }
+
+      if (polyRet.length > 0) {
+        const lastR = polyRet[polyRet.length - 1];
+        polyFeed.push(lastR);
+      }
 
       const polyRetOutward = polyRet.reverse();
+      if (polyRetOutward.length > 0) {
+        polyRetOutward.push({ x: entryPtPx.x, y: aligned[1][0].y });
+      }
+
       const lengthM = parseFloat((polyArea / stepM).toFixed(1));
       return { feed: polyFeed, ret: polyRetOutward, lengthM };
+    } else if (rings.length === 1) {
+      const single = rings[0];
+      const half = Math.ceil(single.length / 2);
+      const polyFeed = [...feed, ...single.slice(0, half + 1)];
+      const polyRet = [...ret, ...single.slice(half).reverse()];
+      const lengthM = parseFloat((polyArea / stepM).toFixed(1));
+      return { feed: polyFeed, ret: polyRet, lengthM };
+    } else {
+      const cX = ((minX + maxX) / 2) * scalePx;
+      const cY = ((minY + maxY) / 2) * scalePx;
+      return { feed: [...feed, { x: cX, y: cY }], ret: [...ret, { x: cX, y: cY }], lengthM: 1.0 };
     }
   }
 
