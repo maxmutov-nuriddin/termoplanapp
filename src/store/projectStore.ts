@@ -27,6 +27,7 @@ interface ProjectState {
   saveRoom: (roomData: Partial<IRoom>) => Promise<void>;
   calculateProject: (projectId: string) => Promise<void>;
   fetchRegions: () => Promise<void>;
+  clearProjects: () => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -39,6 +40,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   isLoading: false,
   isRefreshing: false,
   error: null,
+
+  clearProjects: () => {
+    set({
+      projects: [],
+      currentProject: null,
+      currentRoom: null,
+      calculations: [],
+      smeta: null,
+    });
+  },
 
   fetchRegions: async () => {
     try {
@@ -58,7 +69,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     try {
       const remoteProjects = await ProjectApi.getAllProjects();
-      if (remoteProjects && remoteProjects.length > 0) {
+      if (Array.isArray(remoteProjects)) {
         set({ projects: remoteProjects, isLoading: false, isRefreshing: false });
         return;
       }

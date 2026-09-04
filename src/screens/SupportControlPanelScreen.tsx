@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -34,7 +35,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import { useProjectStore } from '../store/projectStore';
 import { IProject } from '../types';
-import { UZBEKISTAN_REGIONS } from '../api/client';
+import { ProjectApi, UZBEKISTAN_REGIONS } from '../api/client';
 import { formatCurrencyUzs, formatCurrencyUsd } from '../utils/formatters';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
@@ -46,14 +47,29 @@ export const SupportControlPanelScreen: React.FC<{ navigation: any }> = ({ navig
   const [activeFilter, setActiveFilter] = useState<'all' | 'calculated' | 'draft'>('all');
   const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'system'>('projects');
   const [refreshing, setRefreshing] = useState(false);
+  const [systemUsers, setSystemUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const loadSupportData = async (force = false) => {
+    await fetchProjects(force);
+    try {
+      setLoadingUsers(true);
+      const usersList = await ProjectApi.getUsers();
+      setSystemUsers(usersList);
+    } catch {
+      setSystemUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
   useEffect(() => {
-    fetchProjects(false);
+    loadSupportData(false);
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProjects(true);
+    await loadSupportData(true);
     setRefreshing(false);
   };
 
@@ -64,8 +80,8 @@ export const SupportControlPanelScreen: React.FC<{ navigation: any }> = ({ navig
     ]);
   };
 
-  // Mock / Calculated metrics
-  const totalProjectsCount = projects.length || 6;
+  // Real hisoblangan metrikalar (hech qanday soxta demo sonlarsiz)
+  const totalProjectsCount = projects.length;
   const calculatedProjects = projects.filter((p) => p.status === 'calculated');
   const draftProjects = projects.filter((p) => p.status !== 'calculated');
 
@@ -75,17 +91,8 @@ export const SupportControlPanelScreen: React.FC<{ navigation: any }> = ({ navig
     ? calculatedProjects
     : draftProjects;
 
-  const totalAreaM2 = projects.reduce((sum, p) => sum + (p.totalArea || 35), 0) || 280;
+  const totalAreaM2 = projects.reduce((sum, p) => sum + (p.totalArea || 0), 0);
   const estimatedTotalBudget = totalAreaM2 * 450000;
-
-  // Mock Users List for Support Oversight
-  const systemUsers = [
-    { id: 'u1', name: 'Saidov Muzaffar', email: 'muzaffar@termoplan.uz', role: 'user', projectsCount: 3, lastActive: 'Bugun, 10:45', status: 'Faol' },
-    { id: 'u2', name: 'Alisher Karimov', email: 'alisher.eng@gmail.com', role: 'user', projectsCount: 2, lastActive: 'Kecha, 18:20', status: 'Faol' },
-    { id: 'u3', name: 'Jamshid Xolmatov', email: 'jamshid_cad@inbox.uz', role: 'user', projectsCount: 1, lastActive: '2 kun oldin', status: 'Faol' },
-    { id: 'u4', name: 'Otabek Mirzayev', email: 'otabek_term@mail.ru', role: 'user', projectsCount: 4, lastActive: 'Bugun, 09:15', status: 'Faol' },
-    { id: 'u5', name: 'Support Nazoratchi', email: 'support@termoplan.uz', role: 'support', projectsCount: 0, lastActive: 'Hozir onlayn', status: 'Nazoratchi' },
-  ];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -248,7 +255,7 @@ export const SupportControlPanelScreen: React.FC<{ navigation: any }> = ({ navig
 
                     <View style={styles.projectMeta}>
                       <Text style={styles.metaItem}>📍 {regionName}</Text>
-                      <Text style={styles.metaItem}>📐 {p.totalArea || 32} m²</Text>
+                      <Text style={styles.metaItem}>📐 {p.totalArea || 0} m²</Text>
                       <Text style={styles.metaItem}>🏢 {p.buildingType === 'private_house' ? 'Hovli' : 'Kvartira'}</Text>
                     </View>
 
@@ -295,25 +302,41 @@ export const SupportControlPanelScreen: React.FC<{ navigation: any }> = ({ navig
               <Text style={styles.sectionSub}>Barcha hisoblar va ularning loyihalash faolligi</Text>
             </View>
 
-            {systemUsers.map((u) => (
-              <View key={u.id} style={styles.userCard}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>{u.name.substring(0, 2).toUpperCase()}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.userName}>{u.name}</Text>
-                    <View style={[styles.userRoleBadge, u.role === 'support' ? styles.supportRoleBadge : styles.normalRoleBadge]}>
-                      <Text style={[styles.userRoleText, u.role === 'support' ? { color: '#7E22CE' } : { color: COLORS.primaryDark }]}>
-                        {u.role.toUpperCase()}
-                      </Text>
+            {loadingUsers ? (
+              <View style={{ padding: 32, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={{ marginTop: 8, color: COLORS.textSecondary, fontSize: 13 }}>Foydalanuvchilar yuklanmoqda...</Text>
+              </View>
+            ) : systemUsers.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Users size={36} color={COLORS.textMuted} />
+                <Text style={styles.emptyTitle}>Foydalanuvchilar mavjud emas</Text>
+                <Text style={styles.emptyDesc}>Hozircha tizimda boshqa foydalanuvchilar ro‘yxatdan o‘tmagan.</Text>
+              </View>
+            ) : (
+              systemUsers.map((u) => {
+                const dateStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString('uz-UZ') : 'Yangi hisob';
+                return (
+                  <View key={u.id || u._id || u.email} style={styles.userCard}>
+                    <View style={styles.userAvatar}>
+                      <Text style={styles.userAvatarText}>{(u.name || 'F').substring(0, 2).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.userName}>{u.name || 'Nomsiz'}</Text>
+                        <View style={[styles.userRoleBadge, u.role === 'support' ? styles.supportRoleBadge : styles.normalRoleBadge]}>
+                          <Text style={[styles.userRoleText, u.role === 'support' ? { color: '#7E22CE' } : { color: COLORS.primaryDark }]}>
+                            {String(u.role || 'user').toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.userEmail}>{u.email}</Text>
+                      <Text style={styles.userMeta}>Loyihalar: {u.projectsCount || 0} ta • Ro‘yxatdan o‘tgan: {dateStr}</Text>
                     </View>
                   </View>
-                  <Text style={styles.userEmail}>{u.email}</Text>
-                  <Text style={styles.userMeta}>Loyihalar: {u.projectsCount} ta • Oxirgi faollik: {u.lastActive}</Text>
-                </View>
-              </View>
-            ))}
+                );
+              })
+            )}
           </View>
         )}
 
@@ -778,5 +801,28 @@ const styles = StyleSheet.create({
     color: COLORS.surface,
     fontSize: 13.5,
     fontWeight: '800',
+  },
+  emptyCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: SPACING.md,
+    ...SHADOWS.card,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
   },
 });

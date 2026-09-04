@@ -34,6 +34,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
 
   login: async (email: string, password: string) => {
+    try {
+      const { useProjectStore } = require('./projectStore');
+      useProjectStore.getState().clearProjects();
+    } catch {}
     set({ isLoading: true, error: null });
     try {
       const cleanEmail = email.trim().toLowerCase();
@@ -97,6 +101,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   register: async (name: string, email: string, password: string, role: UserRole = 'user', phone?: string) => {
+    try {
+      const { useProjectStore } = require('./projectStore');
+      useProjectStore.getState().clearProjects();
+    } catch {}
     set({ isLoading: true, error: null });
     try {
       const cleanEmail = email.trim().toLowerCase();
@@ -196,6 +204,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    try {
+      const { useProjectStore } = require('./projectStore');
+      useProjectStore.getState().clearProjects();
+    } catch {}
     set({
       user: null,
       token: null,

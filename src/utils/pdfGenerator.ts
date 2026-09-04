@@ -157,7 +157,7 @@ function generateFloorPlanSvg(
   }
 
   return `
-    <svg viewBox="0 0 ${w * scale} ${h * scale}" width="100%" height="240" style="background:#FFFFFF; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+    <svg viewBox="0 0 ${w * scale} ${h * scale}" width="100%" height="195" style="background:#FFFFFF; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
       <defs>
         <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
           <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#F1F5F9" stroke-width="1"/>
@@ -257,41 +257,49 @@ export function generateProjectPdfHtml(options: PdfExportOptions): string {
   <title>TermoPlan Muhandislik Loyihasi</title>
   <style>
     @page {
-      size: A4;
-      margin: 14mm 14mm 14mm 14mm;
+      size: A4 portrait;
+      margin: 8mm 10mm 8mm 10mm;
     }
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    html, body {
       margin: 0;
       padding: 0;
-      color: #0F172A;
       background: #FFFFFF;
-      font-size: 11pt;
-      line-height: 1.45;
+      color: #0F172A;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.35;
     }
     .page {
       page-break-after: always;
-      position: relative;
-      min-height: 260mm;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+      height: 275mm;
+      max-height: 275mm;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
     .page:last-child {
-      page-break-after: avoid;
+      page-break-after: auto;
+      break-after: auto;
     }
     .header-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 8px;
       border-bottom: 2px solid #0F766E;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
     .logo-box {
       display: flex;
@@ -299,22 +307,22 @@ export function generateProjectPdfHtml(options: PdfExportOptions): string {
       gap: 8px;
     }
     .logo-text {
-      font-size: 20pt;
+      font-size: 18pt;
       font-weight: 800;
       color: #0F766E;
       letter-spacing: -0.5px;
     }
     .logo-sub {
-      font-size: 8.5pt;
+      font-size: 8pt;
       color: #64748B;
       font-weight: 500;
     }
     .doc-badge {
       background: #0F766E;
       color: #FFFFFF;
-      font-size: 9pt;
+      font-size: 8.5pt;
       font-weight: 700;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 6px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -323,21 +331,21 @@ export function generateProjectPdfHtml(options: PdfExportOptions): string {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-top: 10px;
+      padding-top: 6px;
       border-top: 1px solid #E2E8F0;
-      font-size: 8pt;
+      font-size: 7.5pt;
       color: #64748B;
-      margin-top: 20px;
+      margin-top: 8px;
     }
     .card {
       background: #F8FAFC;
       border: 1px solid #E2E8F0;
       border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 14px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
     }
     .card-title {
-      font-size: 12pt;
+      font-size: 11pt;
       font-weight: 700;
       color: #0F172A;
       margin-top: 0;
@@ -728,34 +736,34 @@ export function generateProjectPdfHtml(options: PdfExportOptions): string {
         </table>
       </div>
 
-      <div class="total-box">
+      <div class="total-box" style="padding: 8px 14px; margin-top: 6px;">
         <div>
-          <div class="total-title">JAMI HISOBIY BYUDJET (QISH + YOZ + MONTAJ):</div>
-          <div class="total-usd">Valyuta kursi: 1 USD = ${usdRate.toLocaleString()} UZS</div>
+          <div class="total-title" style="font-size: 10pt;">JAMI HISOBIY BYUDJET (QISH + YOZ + MONTAJ):</div>
+          <div class="total-usd" style="font-size: 8pt;">Valyuta kursi: 1 USD = ${usdRate.toLocaleString()} UZS</div>
         </div>
         <div>
-          <div class="total-sum">${formatCurrencyUzs(grandTotalUzs)}</div>
-          <div class="total-usd" style="text-align: right;">~${formatCurrencyUsd(grandTotalUsd)}</div>
+          <div class="total-sum" style="font-size: 14pt;">${formatCurrencyUzs(grandTotalUzs)}</div>
+          <div class="total-usd" style="text-align: right; font-size: 8pt;">~${formatCurrencyUsd(grandTotalUsd)}</div>
         </div>
       </div>
 
-      <div class="card" style="margin-top: 10px; padding: 10px 14px;">
-        <div class="card-title" style="font-size: 10pt; margin-bottom: 6px;">🛠️ Ustalarga O'rnatish Bo'yicha Asosiy Talablar</div>
-        <div style="font-size: 8pt; color: #475569; line-height: 1.45;">
+      <div class="card" style="margin-top: 6px; padding: 8px 12px; margin-bottom: 6px;">
+        <div class="card-title" style="font-size: 9.5pt; margin-bottom: 4px;">🛠️ Ustalarga O'rnatish Bo'yicha Asosiy Talablar</div>
+        <div style="font-size: 7.5pt; color: #475569; line-height: 1.4;">
           1. <strong>Gidravlik opressovka:</strong> Beton styajka quyishdan oldin tizim <strong>6 bar</strong> bosim ostida 24 soat sinovdan o'tkazilishi shart.<br>
           2. <strong>Konditsioner vakuumlash:</strong> Freon ochilishidan oldin quvurlar kamida 15 daqiqa vakuum nasosi bilan namlikdan tozalanishi lozim.<br>
           3. <strong>Damping lenta:</strong> Xonaning hamma perimetri bo'ylab uzluksiz yopishtirilishi shart.
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; padding: 0 10px;">
-        <div style="font-size: 8pt; color: #64748B;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 6px; padding: 0 8px;">
+        <div style="font-size: 7.5pt; color: #64748B;">
           Loyiha tuzuvchi muhandis: <strong>TermoPlan Engineering</strong><br>
           Sana: <strong>${todayStr}</strong>
         </div>
-        <div style="text-align: right; font-size: 8pt; color: #64748B;">
+        <div style="text-align: right; font-size: 7.5pt; color: #64748B;">
           <div>Muhr / Imzo o'rni:</div>
-          <div style="border-bottom: 1px dashed #94A3B8; width: 140px; height: 26px; margin-top: 4px;"></div>
+          <div style="border-bottom: 1px dashed #94A3B8; width: 130px; height: 22px; margin-top: 2px;"></div>
         </div>
       </div>
     </div>

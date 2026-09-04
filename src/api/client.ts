@@ -20,6 +20,17 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  try {
+    const { useAuthStore } = require('../store/authStore');
+    const token = useAuthStore.getState()?.token;
+    if (token && !token.startsWith('offline') && !token.startsWith('quick')) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {}
+  return config;
+});
+
 export const UZBEKISTAN_REGIONS: ClimateRegion[] = [
   { id: 'tashkent', name: 'Tashkent', nameUz: 'Toshkent shahri va viloyati', minWinterTemp: -15, maxSummerTemp: 42, avgWinterTemp: 1.5, avgSummerTemp: 32.5, solarRadiationSummer: 820, solarRadiationWinter: 350, windSpeedWinter: 2.8, humiditySummer: 35, latitude: 41.2995, longitude: 69.2401 },
   { id: 'samarkand', name: 'Samarkand', nameUz: 'Samarqand viloyati', minWinterTemp: -14, maxSummerTemp: 41, avgWinterTemp: 2.0, avgSummerTemp: 31.0, solarRadiationSummer: 840, solarRadiationWinter: 370, windSpeedWinter: 2.5, humiditySummer: 32, latitude: 39.6270, longitude: 66.9749 },
@@ -190,6 +201,15 @@ export const ProjectApi = {
       // offline
     }
     return null;
+  },
+
+  getUsers: async (): Promise<any[]> => {
+    try {
+      const res = await api.get('/auth/users');
+      return res.data?.users || [];
+    } catch {
+      return [];
+    }
   },
 
   getPdfDownloadUrl: (projectId: string): string => {
