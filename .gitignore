@@ -1,5 +1,33 @@
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+dist/
+
+# Environment variables
+.env
+.env*.local
+
+# Native builds
+*.ipa
+*.apk
+*.aab
+
+# Keystores and certificates
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

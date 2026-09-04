@@ -24,9 +24,12 @@ import {
   MapPin,
   Trash2,
   Home,
+  LogOut,
+  User,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProjectStore } from '../store/projectStore';
+import { useAuthStore } from '../store/authStore';
 import { Header } from '../components/common/Header';
 import { CustomButton } from '../components/common/CustomButton';
 import { IProject } from '../types';
@@ -43,12 +46,20 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     deleteProject,
     isRefreshing,
   } = useProjectStore();
+  const { user, logout } = useAuthStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [clientName, setClientName] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('tashkent');
   const [buildingType, setBuildingType] = useState<'private_house' | 'apartment'>('private_house');
+
+  const handleLogout = () => {
+    Alert.alert('Chiqish', 'Hisobingizdan chiqmoqchimisiz?', [
+      { text: 'Bekor qilish', style: 'cancel' },
+      { text: 'Chiqish', style: 'destructive', onPress: () => logout() },
+    ]);
+  };
 
   useEffect(() => {
     fetchProjects(false);
@@ -153,23 +164,51 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         title="TermoPlan"
         subtitle="Issiqlik & Mikroiqlim Muhandisi"
         rightAction={
-          <TouchableOpacity
-            style={styles.newBtn}
-            onPress={() => setModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.primaryLight]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.newBtnGradient}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.newBtn}
+              onPress={() => setModalVisible(true)}
+              activeOpacity={0.8}
             >
-              <Plus color={COLORS.surface} size={18} />
-              <Text style={styles.newBtnText}>Yangi</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.primaryLight]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.newBtnGradient}
+              >
+                <Plus color={COLORS.surface} size={16} />
+                <Text style={styles.newBtnText}>Yangi</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.logoutHeaderBtn}
+              onPress={handleLogout}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <LogOut size={18} color={COLORS.danger} />
+            </TouchableOpacity>
+          </View>
         }
       />
+
+      {/* Logged in User Bar */}
+      <View style={styles.userProfileBar}>
+        <View style={styles.userProfileLeft}>
+          <View style={styles.userProfileAvatar}>
+            <Text style={styles.userProfileAvatarText}>
+              {(user?.name || 'U').substring(0, 1).toUpperCase()}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.userProfileName}>{user?.name || 'Foydalanuvchi'}</Text>
+            <Text style={styles.userProfileEmail}>{user?.email || 'Shaxsiy loyihalar'}</Text>
+          </View>
+        </View>
+        <View style={styles.userRolePill}>
+          <Text style={styles.userRolePillText}>FOYDALANUVCHI</Text>
+        </View>
+      </View>
 
       <FlatList
         data={projects}
@@ -587,5 +626,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: COLORS.surface,
+  },
+  logoutHeaderBtn: {
+    padding: 7,
+    backgroundColor: '#FEE2E2',
+    borderRadius: RADIUS.pill,
+  },
+  userProfileBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    marginBottom: SPACING.xs,
+  },
+  userProfileLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  userProfileAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  userProfileAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+  },
+  userProfileName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  userProfileEmail: {
+    fontSize: 10.5,
+    color: COLORS.textMuted,
+  },
+  userRolePill: {
+    backgroundColor: COLORS.primaryBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  userRolePillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
+    letterSpacing: 0.5,
   },
 });

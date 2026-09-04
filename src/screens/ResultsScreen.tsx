@@ -12,6 +12,8 @@ import { HeatingSpecCard } from '../components/results/HeatingSpecCard';
 import { CoolingSpecCard } from '../components/results/CoolingSpecCard';
 import { SmetaTable } from '../components/results/SmetaTable';
 import { useProjectStore } from '../store/projectStore';
+import { useCanvasStore } from '../store/canvasStore';
+import { generateAndSharePdf } from '../utils/pdfGenerator';
 import { UZBEKISTAN_REGIONS, ProjectApi } from '../api/client';
 import { IHeatingCalculation, ICoolingCalculation, ISmeta } from '../types';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
@@ -100,24 +102,28 @@ export const ResultsScreen: React.FC<{ navigation: any; route: any }> = ({ navig
   const handleShareToTelegram = async () => {
     setDownloading(true);
     try {
-      const pdfUrl = ProjectApi.getPdfDownloadUrl(projectId || currentProject?._id || 'demo_proj');
-      const fileUri = `${FileSystem.documentDirectory}termoplan_loyiha_${projectId || 'hisobot'}.pdf`;
-
-      const downloadRes = await FileSystem.downloadAsync(pdfUrl, fileUri);
+      const canvas = useCanvasStore.getState();
+      await generateAndSharePdf({
+        project: currentProject,
+        calculations,
+        smeta: smetaData,
+        canvasState: {
+          roomPoints: canvas.roomPoints,
+          interiorWalls: canvas.interiorWalls,
+          windows: canvas.windows,
+          doors: canvas.doors,
+          furniture: canvas.furniture,
+          boilerPosition: canvas.boilerPosition,
+          manifoldPosition: canvas.manifoldPosition,
+          acPosition: canvas.acPosition,
+          roomArea: canvas.roomArea,
+          roomName: canvas.roomName,
+        },
+      });
       setDownloading(false);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(downloadRes.uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'TermoPlan Loyihasini Ulashish (Telegram / Messenjer)',
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert('Muvaffaqiyatli', `PDF saqlandi: ${downloadRes.uri}`);
-      }
     } catch (err: any) {
       setDownloading(false);
-      Alert.alert('Eksport', 'PDF faylini Telegram yoki boshqa ilovaga yuborish uchun tayyorlandi.');
+      Alert.alert('Eksport xatosi', 'PDF faylini shakllantirishda xatolik yuz berdi: ' + (err.message || ''));
     }
   };
 
