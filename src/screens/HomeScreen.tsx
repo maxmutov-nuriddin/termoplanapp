@@ -198,7 +198,7 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             </Text>
 
             <CustomButton
-              title="+ Yangi Loyiha Yaratish"
+              title="Yangi Loyiha Yaratish"
               onPress={() => setModalVisible(true)}
               style={{ marginTop: 24, width: '100%' }}
               icon={<Plus size={18} color={COLORS.surface} />}

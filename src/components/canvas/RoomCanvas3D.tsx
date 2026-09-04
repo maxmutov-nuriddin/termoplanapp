@@ -96,6 +96,62 @@ const Walls = ({ roomPoints, wallHeight, walls = [] }: any) => {
   return <>{wallMeshes}</>;
 };
 
+// 2.5. Ichki Devorlar / To'siqlar (Interior Walls 3D)
+const InteriorWalls3D = ({
+  interiorWalls = [],
+  wallHeight,
+}: {
+  interiorWalls: any[];
+  wallHeight: number;
+}) => {
+  const wallMeshes = useMemo(() => {
+    if (!interiorWalls || interiorWalls.length === 0) return [];
+    const meshes = [];
+
+    for (let i = 0; i < interiorWalls.length; i++) {
+      const iw = interiorWalls[i];
+      if (!iw || !iw.startPoint || !iw.endPoint) continue;
+      const p1 = iw.startPoint;
+      const p2 = iw.endPoint;
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const length = Math.hypot(dx, dy);
+
+      if (length < 0.05) continue;
+
+      const angle = -Math.atan2(dy, dx);
+      const thickness = iw.thicknessM || 0.12;
+
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0);
+      shape.lineTo(length, 0);
+      shape.lineTo(length, wallHeight);
+      shape.lineTo(0, wallHeight);
+      shape.lineTo(0, 0);
+
+      const extrudeSettings = { depth: thickness, bevelEnabled: false };
+      const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+      const perpX = -Math.sin(angle) * (thickness / 2);
+      const perpY = -Math.cos(angle) * (thickness / 2);
+
+      meshes.push(
+        <mesh
+          key={`int_wall_${iw.id || i}`}
+          position={[p1.x + perpX, 0, p1.y + perpY]}
+          rotation={[0, angle, 0]}
+        >
+          <primitive object={geometry} attach="geometry" />
+          <meshStandardMaterial color="#475569" roughness={0.7} metalness={0.1} />
+        </mesh>
+      );
+    }
+    return meshes;
+  }, [interiorWalls, wallHeight]);
+
+  return <>{wallMeshes}</>;
+};
+
 // 3. 3D Eshiklar (Doors)
 const Doors3D = ({ doors, wallHeight }: { doors: any[]; wallHeight: number }) => {
   return (
@@ -104,8 +160,13 @@ const Doors3D = ({ doors, wallHeight }: { doors: any[]; wallHeight: number }) =>
         if (!door || !door.position || !Number.isFinite(door.position.x)) return null;
         const width = door.width || 0.9;
         const height = door.height || wallHeight * 0.72;
+        const rotRad = ((door.rotation || 0) * Math.PI) / 180;
         return (
-          <group key={`door_${i}`} position={[door.position.x, height / 2, door.position.y]}>
+          <group
+            key={`door_${i}`}
+            position={[door.position.x, height / 2, door.position.y]}
+            rotation={[0, -rotRad, 0]}
+          >
             <mesh>
               <boxGeometry args={[width, height, 0.16]} />
               <meshStandardMaterial color="#523722" roughness={0.6} />
@@ -130,8 +191,13 @@ const Windows3D = ({ windows, wallHeight }: { windows: any[]; wallHeight: number
         const width = win.width || 1.4;
         const height = win.height || 1.2;
         const posY = win.elevationM || 1.0;
+        const rotRad = ((win.rotation || 0) * Math.PI) / 180;
         return (
-          <group key={`win_${i}`} position={[win.position.x, posY + height / 2, win.position.y]}>
+          <group
+            key={`win_${i}`}
+            position={[win.position.x, posY + height / 2, win.position.y]}
+            rotation={[0, -rotRad, 0]}
+          >
             <mesh>
               <boxGeometry args={[width, height, 0.18]} />
               <meshStandardMaterial color="#FFFFFF" roughness={0.3} />
@@ -156,10 +222,15 @@ const Furnitures3D = ({ items }: { items: any[] }) => {
         const w = item.width || 1.2;
         const l = item.length || 2.0;
         const type = item.type || 'table';
+        const rotRad = ((item.rotation || 0) * Math.PI) / 180;
 
         if (type === 'bed') {
           return (
-            <group key={`furn_${i}`} position={[item.position.x, 0, item.position.y]}>
+            <group
+              key={`furn_${i}`}
+              position={[item.position.x, 0, item.position.y]}
+              rotation={[0, -rotRad, 0]}
+            >
               <mesh position={[0, 0.2, 0]}>
                 <boxGeometry args={[w, 0.4, l]} />
                 <meshStandardMaterial color="#78350F" roughness={0.6} />
@@ -178,7 +249,11 @@ const Furnitures3D = ({ items }: { items: any[] }) => {
 
         if (type === 'sofa') {
           return (
-            <group key={`furn_${i}`} position={[item.position.x, 0, item.position.y]}>
+            <group
+              key={`furn_${i}`}
+              position={[item.position.x, 0, item.position.y]}
+              rotation={[0, -rotRad, 0]}
+            >
               <mesh position={[0, 0.25, 0]}>
                 <boxGeometry args={[w, 0.4, l]} />
                 <meshStandardMaterial color="#334155" roughness={0.7} />
@@ -192,7 +267,11 @@ const Furnitures3D = ({ items }: { items: any[] }) => {
         }
 
         return (
-          <mesh key={`furn_${i}`} position={[item.position.x, 0.4, item.position.y]}>
+          <mesh
+            key={`furn_${i}`}
+            position={[item.position.x, 0.4, item.position.y]}
+            rotation={[0, -rotRad, 0]}
+          >
             <boxGeometry args={[w, 0.8, l]} />
             <meshStandardMaterial color="#D97706" roughness={0.5} />
           </mesh>
@@ -507,6 +586,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
   const {
     roomPoints,
     walls,
+    interiorWalls,
     doors,
     windows,
     furniture,
@@ -518,6 +598,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     useShallow(s => ({
       roomPoints: s.roomPoints,
       walls: s.walls,
+      interiorWalls: s.interiorWalls,
       doors: s.doors,
       windows: s.windows,
       furniture: s.furniture,
@@ -536,18 +617,18 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
     if ((roomPoints || []).length < 3) return { circuits: [] };
     return generateRealisticFloorHeating(
       roomPoints,
-      null,
-      [],
+      manifoldPosition,
+      interiorWalls || [],
       [],
       'spiral',
-      [],
-      [],
-      null,
+      doors || [],
+      windows || [],
+      boilerPosition,
       furniture || [],
       0,
       walls || []
     );
-  }, [roomPoints, furniture, walls]);
+  }, [roomPoints, manifoldPosition, interiorWalls, doors, windows, boilerPosition, furniture, walls]);
 
   const centroid = useMemo(() => {
     if (validPoints.length === 0) return { x: 0, y: 0 };
@@ -686,6 +767,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
           <group position={[-centroid.x, 0, -centroid.y]}>
             <Floor roomPoints={validPoints} />
             <Walls roomPoints={validPoints} wallHeight={wallHeightM} walls={walls} />
+            <InteriorWalls3D interiorWalls={interiorWalls} wallHeight={wallHeightM} />
             <Doors3D doors={doors} wallHeight={wallHeightM} />
             <Windows3D windows={windows} wallHeight={wallHeightM} />
             <Furnitures3D items={furniture} />

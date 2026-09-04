@@ -805,8 +805,32 @@ export function calculateMasterPlumberPlan(
     boilerReturnMain = `${mX.toFixed(1)},${(mY + 8).toFixed(1)} ${(bX + (mX - bX) * 0.5 + 8).toFixed(1)},${(mY + 8).toFixed(1)} ${(bX + (mX - bX) * 0.5 + 8).toFixed(1)},${(bY + 8).toFixed(1)} ${bX.toFixed(1)},${(bY + 8).toFixed(1)}`;
   }
 
-  // 2. BARCHA ISTISNO ZONALAR
+  // 2. BARCHA ISTISNO ZONALAR (Mebel, Istisno joylar va Ichki devorlar)
   const combinedExcludes: Array<{ points: IPoint[] }> = [...(excludedZones || [])];
+
+  // Ichki devorlar (to'siqlar) bo'ylab quvur o'tmasligi uchun to'siq poligonlari
+  for (const iw of interiorWalls || []) {
+    if (iw && iw.startPoint && iw.endPoint) {
+      const halfThick = Math.max(0.08, (iw.thicknessM || 0.12) / 2 + 0.08);
+      const dx = iw.endPoint.x - iw.startPoint.x;
+      const dy = iw.endPoint.y - iw.startPoint.y;
+      const len = Math.hypot(dx, dy);
+      if (len > 0.1) {
+        const nx = (-dy / len) * halfThick;
+        const ny = (dx / len) * halfThick;
+        const ex = (dx / len) * 0.04;
+        const ey = (dy / len) * 0.04;
+        combinedExcludes.push({
+          points: [
+            { x: iw.startPoint.x - ex + nx, y: iw.startPoint.y - ey + ny },
+            { x: iw.endPoint.x + ex + nx, y: iw.endPoint.y + ey + ny },
+            { x: iw.endPoint.x + ex - nx, y: iw.endPoint.y + ey - ny },
+            { x: iw.startPoint.x - ex - nx, y: iw.startPoint.y - ey - ny },
+          ],
+        });
+      }
+    }
+  }
 
   for (const f of furniture || []) {
     if (f && f.position) {
