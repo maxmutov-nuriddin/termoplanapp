@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { AuthScreen } from '../screens/AuthScreen';
 import { SupportControlPanelScreen } from '../screens/SupportControlPanelScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { LocationScreen } from '../screens/LocationScreen';
 import { ConstructorScreen } from '../screens/ConstructorScreen';
 import { CADStudioScreen } from '../screens/CADStudioScreen';
@@ -15,6 +16,7 @@ export type RootStackParamList = {
   AuthScreen: undefined;
   SupportControlPanelScreen: undefined;
   HomeScreen: undefined;
+  SettingsScreen: undefined;
   LocationScreen: { projectId?: string };
   ConstructorScreen: { projectId?: string };
   CADStudioScreen: { projectId?: string };
@@ -42,6 +44,7 @@ export const AppNavigator: React.FC = () => {
       ) : (
         <>
           <Stack.Screen name="HomeScreen" component={HomeScreen} />
+          <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
           <Stack.Screen name="LocationScreen" component={LocationScreen} />
           <Stack.Screen name="ConstructorScreen" component={ConstructorScreen} />
           <Stack.Screen

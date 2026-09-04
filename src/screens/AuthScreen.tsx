@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Flame,
   User,
-  ShieldCheck,
   Lock,
   Mail,
   Phone,
@@ -24,7 +23,7 @@ import {
   UserPlus,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore, UserRole } from '../store/authStore';
+import { useAuthStore } from '../store/authStore';
 import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const AuthScreen: React.FC = () => {
@@ -32,9 +31,6 @@ export const AuthScreen: React.FC = () => {
   const { login, register, isLoading } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-
-  // Registratsiya uchun tanlanadigan rol (Foydalanuvchi yoki Support)
-  const [registerRole, setRegisterRole] = useState<UserRole>('user');
 
   // Form Fields
   const [name, setName] = useState('');
@@ -53,7 +49,8 @@ export const AuthScreen: React.FC = () => {
         Alert.alert('Xatolik', 'Ism va familiyangizni kiriting.');
         return;
       }
-      const res = await register(name, email, password, registerRole, phone);
+      // Ro'yxatdan o'tuvchilar har doim oddiy foydalanuvchi bo'lib ro'yxatdan o'tadi
+      const res = await register(name, email, password, 'user', phone);
       if (!res.success) {
         Alert.alert('Xatolik', res.error || 'Ro‘yxatdan o‘tishda xatolik yuz berdi');
       }
@@ -117,41 +114,6 @@ export const AuthScreen: React.FC = () => {
 
         {/* Form Card */}
         <View style={styles.card}>
-          {/* ======================= 1. RO'YXATDAN O'TISH: ROLNI TANLASH ======================= */}
-          {activeTab === 'register' && (
-            <View style={{ marginBottom: SPACING.md }}>
-              <Text style={styles.inputLabel}>Hisob Turi (Rolni tanlang):</Text>
-              <View style={styles.roleGrid}>
-                {/* Foydalanuvchi roli */}
-                <TouchableOpacity
-                  style={[styles.roleCard, registerRole === 'user' && styles.activeRoleCard]}
-                  onPress={() => setRegisterRole('user')}
-                >
-                  <View style={[styles.roleIconBox, registerRole === 'user' && styles.activeRoleIconBox]}>
-                    <User size={18} color={registerRole === 'user' ? COLORS.primary : COLORS.textSecondary} />
-                  </View>
-                  <Text style={[styles.roleTitle, registerRole === 'user' && styles.activeRoleTitle]}>
-                    Foydalanuvchi
-                  </Text>
-                  <Text style={styles.roleDesc}>Loyihalar tuzish, 2D/3D chizish va smeta</Text>
-                </TouchableOpacity>
-
-                {/* Support roli */}
-                <TouchableOpacity
-                  style={[styles.roleCard, registerRole === 'support' && styles.activeSupportRoleCard]}
-                  onPress={() => setRegisterRole('support')}
-                >
-                  <View style={[styles.roleIconBox, registerRole === 'support' && styles.activeSupportRoleIconBox]}>
-                    <ShieldCheck size={18} color={registerRole === 'support' ? '#7E22CE' : COLORS.textSecondary} />
-                  </View>
-                  <Text style={[styles.roleTitle, registerRole === 'support' && { color: '#7E22CE' }]}>
-                    Support
-                  </Text>
-                  <Text style={styles.roleDesc}>Nazorat paneli, hisobotlar va tizim auditi</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* Registratsiya: Ism va Familiya */}
           {activeTab === 'register' && (
@@ -214,10 +176,7 @@ export const AuthScreen: React.FC = () => {
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              activeTab === 'register' && registerRole === 'support' && { backgroundColor: '#7E22CE' },
-            ]}
+            style={styles.submitBtn}
             onPress={handleSubmit}
             disabled={isLoading}
           >
@@ -311,56 +270,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 6,
     marginTop: 6,
-  },
-  roleGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  roleCard: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: 10,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  activeRoleCard: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primaryBg,
-  },
-  activeSupportRoleCard: {
-    borderColor: '#7E22CE',
-    backgroundColor: '#FAF5FF',
-  },
-  roleIconBox: {
-    width: 30,
-    height: 30,
-    borderRadius: RADIUS.sm,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  activeRoleIconBox: {
-    backgroundColor: '#CCFBF1',
-  },
-  activeSupportRoleIconBox: {
-    backgroundColor: '#F3E8FF',
-  },
-  roleTitle: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 2,
-  },
-  activeRoleTitle: {
-    color: COLORS.primaryDark,
-  },
-  roleDesc: {
-    fontSize: 10,
-    color: COLORS.textMuted,
-    lineHeight: 14,
   },
   inputBox: {
     flexDirection: 'row',

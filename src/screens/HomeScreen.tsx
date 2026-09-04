@@ -24,7 +24,7 @@ import {
   MapPin,
   Trash2,
   Home,
-  LogOut,
+  Settings,
   User,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -183,10 +183,10 @@ export const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.logoutHeaderBtn}
-              onPress={handleLogout}
+              onPress={() => navigation.navigate('SettingsScreen')}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <LogOut size={18} color={COLORS.danger} />
+              <Settings size={18} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
         }
