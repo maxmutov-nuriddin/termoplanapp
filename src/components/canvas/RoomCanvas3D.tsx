@@ -357,7 +357,7 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
     if (acPos && Number.isFinite(acPos.x) && Number.isFinite(acPos.y)) {
       targetX = acPos.x;
       targetY = acPos.y;
-      angle = acPos.targetAngle || 90;
+      angle = acPos.targetAngle !== undefined ? acPos.targetAngle : 90;
     } else if (roomPoints.length >= 2) {
       let minX = Infinity, maxX = -Infinity, minY = Infinity;
       roomPoints.forEach(p => {
@@ -369,15 +369,10 @@ const AirConditioner3D = ({ acPos, roomPoints, wallHeight }: { acPos?: any; room
       targetY = minY + 0.35;
     }
 
-    let offsetY = 0.20;
-    if (angle === 270) {
-      offsetY = -0.20;
-    }
-
-    const rot = angle === 270 ? Math.PI : 0;
+    const rot = ((90 - angle) * Math.PI) / 180;
 
     return {
-      pos: [targetX, wallHeight - 0.45, targetY + offsetY],
+      pos: [targetX, wallHeight - 0.45, targetY],
       rotY: rot
     };
   }, [acPos, roomPoints, wallHeight]);
@@ -641,6 +636,10 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
 
   const acPositions3D = useMemo(() => {
     if (validPoints.length < 3) return [{ x: 1.2, y: 0.5, targetAngle: 90 }];
+    const hasMultiRooms = interiorWalls && interiorWalls.length > 0;
+    if (!hasMultiRooms && acPosition) {
+      return [acPosition];
+    }
     const res = calculateAcCountAndPositions(
       validPoints,
       0,
@@ -652,7 +651,7 @@ export const RoomCanvas3D: React.FC<RoomCanvas3DProps> = ({
       0
     );
     return (res.positions && res.positions.length > 0) ? res.positions : [{ x: 1.2, y: 0.5, targetAngle: 90 }];
-  }, [validPoints, wallHeightM, windows, interiorWalls]);
+  }, [validPoints, wallHeightM, windows, interiorWalls, acPosition]);
 
   const handleZoomIn = () => {
     if (orbitRef.current) {

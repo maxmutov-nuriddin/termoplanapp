@@ -834,37 +834,100 @@ export function calculateAcCountAndPositions(
 
         totalBtuSum += subBtu;
 
-        const hasTopOuter = Math.abs(rMinY - minY) < 0.25;
-        const hasBottomOuter = Math.abs(rMaxY - maxY) < 0.25;
-        const hasLeftOuter = Math.abs(rMinX - minX) < 0.25;
-        const hasRightOuter = Math.abs(rMaxX - maxX) < 0.25;
+        let bestCandidate: { x: number; y: number; targetAngle: number; maxRangeM: number } | null = null;
+        let bestScore = -1;
 
-        let acX = rMinX + rW * 0.5;
-        let acY = rMinY + 0.35;
-        let targetAngle = 90;
-        let maxRangeM = Math.min(rH * 0.85, 3.2);
+        const cX = xs.reduce((a, b) => a + b, 0) / xs.length;
+        const cY = ys.reduce((a, b) => a + b, 0) / ys.length;
 
-        if (hasTopOuter) {
-          acX = rMinX + rW * 0.5;
-          acY = rMinY + 0.35;
-          targetAngle = 90;
-          maxRangeM = Math.min(rH * 0.85, 3.2);
-        } else if (hasRightOuter && rW >= rH) {
-          acX = rMaxX - 0.35;
-          acY = rMinY + rH * 0.5;
-          targetAngle = 180;
-          maxRangeM = Math.min(rW * 0.85, 3.5);
-        } else if (hasBottomOuter) {
-          acX = rMinX + rW * 0.5;
-          acY = rMaxY - 0.35;
-          targetAngle = 270;
-          maxRangeM = Math.min(rH * 0.85, 3.2);
-        } else if (hasLeftOuter) {
-          acX = rMinX + 0.35;
-          acY = rMinY + rH * 0.5;
-          targetAngle = 0;
-          maxRangeM = Math.min(rW * 0.85, 3.5);
+        const isSegmentOnPolygon = (p1: IPoint, p2: IPoint, poly: IPoint[], tol: number = 0.2): boolean => {
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+          const n = poly.length;
+          for (let i = 0; i < n; i++) {
+            const a = poly[i];
+            const b = poly[(i + 1) % n];
+            const abx = b.x - a.x;
+            const aby = b.y - a.y;
+            const segLenSq = abx * abx + aby * aby;
+            if (segLenSq < 1e-4) continue;
+            const t = Math.max(0, Math.min(1, ((midX - a.x) * abx + (midY - a.y) * aby) / segLenSq));
+            const projX = a.x + t * abx;
+            const projY = a.y + t * aby;
+            const dist = Math.hypot(midX - projX, midY - projY);
+            if (dist < tol) return true;
+          }
+          return false;
+        };
+
+        const nPts = isl.length;
+        for (let i = 0; i < nPts; i++) {
+          const p1 = isl[i];
+          const p2 = isl[(i + 1) % nPts];
+          const edgeDx = p2.x - p1.x;
+          const edgeDy = p2.y - p1.y;
+          const edgeLen = Math.hypot(edgeDx, edgeDy);
+          if (edgeLen < 0.9) continue;
+
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+          const isExterior = isSegmentOnPolygon(p1, p2, valid);
+
+          let candX = midX;
+          let candY = midY;
+          let targetAngle = 90;
+          let maxRangeM = 3.2;
+
+          if (Math.abs(edgeDx) >= Math.abs(edgeDy)) {
+            // Gorizontal devor
+            if (cY > midY) {
+              // Xona devordan pastda -> pastga qarab puflaydi
+              candY = midY + 0.22;
+              targetAngle = 90;
+              maxRangeM = Math.min(rH * 0.85, 3.5);
+            } else {
+              // Xona devordan tepada -> tepaga qarab puflaydi
+              candY = midY - 0.22;
+              targetAngle = 270;
+              maxRangeM = Math.min(rH * 0.85, 3.5);
+            }
+          } else {
+            // Vertikal devor
+            if (cX > midX) {
+              // Xona devordan o'ngda -> o'ngga qarab puflaydi
+              candX = midX + 0.22;
+              targetAngle = 0;
+              maxRangeM = Math.min(rW * 0.85, 3.5);
+            } else {
+              // Xona devordan chapda -> chapga qarab puflaydi
+              candX = midX - 0.22;
+              targetAngle = 180;
+              maxRangeM = Math.min(rW * 0.85, 3.5);
+            }
+          }
+
+          // HVAC tavsiyasi: Tashqi devor ustun (+100 ball), devor uzunligi
+          const score = (isExterior ? 100 : 30) + edgeLen + (Math.abs(edgeDx) >= Math.abs(edgeDy) ? 2 : 0);
+          if (score > bestScore) {
+            bestScore = score;
+            bestCandidate = { x: candX, y: candY, targetAngle, maxRangeM };
+          }
         }
+
+        // Fallback agar tashqi devor bo'lmasa: xona ichidagi eng uzun devorga qo'yish
+        if (!bestCandidate) {
+          bestCandidate = {
+            x: rMinX + rW * 0.5,
+            y: rMinY + 0.35,
+            targetAngle: 90,
+            maxRangeM: Math.min(rH * 0.85, 3.2),
+          };
+        }
+
+        const acX = bestCandidate.x;
+        const acY = bestCandidate.y;
+        const targetAngle = bestCandidate.targetAngle;
+        const maxRangeM = bestCandidate.maxRangeM;
 
         const placement: IAcPlacement = {
           x: parseFloat(acX.toFixed(2)),

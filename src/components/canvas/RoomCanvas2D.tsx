@@ -785,7 +785,8 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
                 windows,
                 0
               );
-              const listToRender = acPosition
+              const hasMultiRooms = interiorWalls && interiorWalls.length > 0;
+              const listToRender = (!hasMultiRooms && acPosition)
                 ? [{ ...acPosition, btu: acCalc.positions[0]?.btu || 12000, label: 'AC' }]
                 : ((acCalc.positions && acCalc.positions.length > 0)
                   ? acCalc.positions
