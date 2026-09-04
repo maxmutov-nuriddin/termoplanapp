@@ -219,7 +219,7 @@ export const RoomCanvas2D: React.FC<RoomCanvas2DProps> = ({
   const lastPinchDistRef = useRef<number>(0);
   const lastAngleRef = useRef<number>(0);
   const prevTouchCountRef = useRef<number>(0);
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const screenToWorld = (screenX: number, screenY: number): { x: number; y: number } => {
     const { panOffset: currentPan, zoomScale: currentZoom } = useCanvasStore.getState();

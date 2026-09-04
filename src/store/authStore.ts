@@ -20,8 +20,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (email: string, password: string, loginRole?: UserRole) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; role?: UserRole }>;
+  register: (name: string, email: string, password: string, role?: UserRole, phone?: string) => Promise<{ success: boolean; error?: string }>;
   quickLogin: (role: UserRole) => void;
   logout: () => void;
 }
@@ -33,41 +33,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string, password: string, loginRole?: UserRole) => {
+  login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const isSupportEmail = cleanEmail.includes('support') || cleanEmail === 'admin@termoplan.uz';
 
-      // Agar foydalanuvchi "Support" sifatida kirmoqchi bo'lsa, lekin support huquqi bo'lmasa
-      if (loginRole === 'support' && !isSupportEmail) {
-        set({ isLoading: false, error: 'Ushbu hisob Support vakolatiga ega emas. Foydalanuvchi sifatida kiring.' });
-        return {
-          success: false,
-          error: 'Ushbu hisob Support vakolatiga ega emas. Foydalanuvchi sifatida kiring.',
-        };
-      }
-
-      // 1. Support hisobi
-      if (loginRole === 'support' || (loginRole === undefined && isSupportEmail)) {
-        const supportUser: AuthUser = {
-          id: 'support_admin_01',
-          name: 'Nazoratchi (Support)',
-          email: cleanEmail || 'support@termoplan.uz',
-          role: 'support',
-          phone: '+998 71 200-00-01',
-          token: 'mock_jwt_support_token_2026',
-        };
-        set({
-          user: supportUser,
-          token: supportUser.token || null,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        return { success: true, role: 'support' };
-      }
-
-      // 2. Oddiy foydalanuvchi - Backend orqali urinish
+      // 1. Backend orqali kirish (MongoDB dan tekshiradi va rolni aniqlaydi)
       try {
         const res = await axios.post(`${API_BASE_URL}/auth/login`, {
           email: cleanEmail,
@@ -92,43 +63,46 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
           return { success: true, role: detectedRole };
         }
-      } catch {
-        // Backend oflayn bo'lsa - oflayn foydalanuvchi kirishi
+      } catch (err: any) {
+        if (err.response && err.response.data && err.response.data.message) {
+          set({ isLoading: false, error: err.response.data.message });
+          return { success: false, error: err.response.data.message };
+        }
       }
 
-      // Oflayn muvaffaqiyatli foydalanuvchi kirishi
-      const regularUser: AuthUser = {
-        id: `user_${Date.now()}`,
-        name: cleanEmail.split('@')[0] || 'Loyiha Muhandisi',
+      // 2. Oflayn rejim fallback (agar server vaqtincha aloqada bo'lmasa)
+      const isSupportEmail = cleanEmail.includes('support') || cleanEmail === 'admin@termoplan.uz';
+      const fallbackRole: UserRole = isSupportEmail ? 'support' : 'user';
+
+      const fallbackUser: AuthUser = {
+        id: isSupportEmail ? 'support_offline_01' : `user_${Date.now()}`,
+        name: isSupportEmail ? 'Nazoratchi (Support)' : (cleanEmail.split('@')[0] || 'Loyiha Muhandisi'),
         email: cleanEmail,
-        role: 'user',
-        token: 'offline_jwt_token',
+        role: fallbackRole,
+        token: isSupportEmail ? 'offline_support_token' : 'offline_jwt_token',
       };
 
       set({
-        user: regularUser,
-        token: regularUser.token || null,
+        user: fallbackUser,
+        token: fallbackUser.token || null,
         isAuthenticated: true,
         isLoading: false,
       });
 
-      return { success: true, role: 'user' };
+      return { success: true, role: fallbackRole };
     } catch (err: any) {
       set({ isLoading: false, error: err.message || 'Kirishda xatolik yuz berdi' });
       return { success: false, error: err.message };
     }
   },
 
-  register: async (name: string, email: string, password: string, phone?: string) => {
+  register: async (name: string, email: string, password: string, role: UserRole = 'user', phone?: string) => {
     set({ isLoading: true, error: null });
     try {
       const cleanEmail = email.trim().toLowerCase();
       const cleanName = name.trim() || 'Foydalanuvchi';
 
-      // Ro'yxatdan o'tishda har doim oddiy foydalanuvchi ('user') bo'lib ro'yxatdan o'tadi
-      const role: UserRole = 'user';
-
-      // Backend orqali urinish
+      // Backend orqali ro'yxatdan o'tish (Rol bilan birga MongoDB ga yoziladi)
       try {
         const res = await axios.post(`${API_BASE_URL}/auth/register`, {
           name: cleanName,
@@ -139,11 +113,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         }, { timeout: 15000 });
 
         if (res.data && res.data.user) {
+          const detectedRole: UserRole = res.data.user.role === 'support' || res.data.user.role === 'admin' ? 'support' : 'user';
           const authUser: AuthUser = {
             id: res.data.user.id || res.data.user._id,
             name: res.data.user.name,
             email: res.data.user.email,
-            role: 'user',
+            role: detectedRole,
             phone: res.data.user.phone,
             token: res.data.token,
           };
@@ -155,15 +130,19 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
           return { success: true };
         }
-      } catch {
-        // Backend oflayn bo'lsa - oflayn registratsiya
+      } catch (err: any) {
+        if (err.response && err.response.data && err.response.data.message) {
+          set({ isLoading: false, error: err.response.data.message });
+          return { success: false, error: err.response.data.message };
+        }
       }
 
+      // Oflayn registratsiya fallback
       const newUser: AuthUser = {
-        id: `user_${Date.now()}`,
+        id: role === 'support' ? `support_${Date.now()}` : `user_${Date.now()}`,
         name: cleanName,
         email: cleanEmail,
-        role: 'user',
+        role,
         phone,
         token: 'offline_jwt_token',
       };

@@ -22,8 +22,6 @@ import {
   ArrowRight,
   LogIn,
   UserPlus,
-  Sparkles,
-  Info,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore, UserRole } from '../store/authStore';
@@ -31,11 +29,12 @@ import { COLORS, SHADOWS, RADIUS, SPACING } from '../theme';
 
 export const AuthScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { login, register, quickLogin, isLoading } = useAuthStore();
+  const { login, register, isLoading } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  // Login paytida rolni aniqlash uchun tanlov (Foydalanuvchi yoki Support)
-  const [loginRole, setLoginRole] = useState<UserRole>('user');
+
+  // Registratsiya uchun tanlanadigan rol (Foydalanuvchi yoki Support)
+  const [registerRole, setRegisterRole] = useState<UserRole>('user');
 
   // Form Fields
   const [name, setName] = useState('');
@@ -50,18 +49,18 @@ export const AuthScreen: React.FC = () => {
     }
 
     if (activeTab === 'register') {
-      // Ro'yxatdan o'tishda faqat oddiy odam (foydalanuvchi) bo'lib o'tadi
       if (!name.trim()) {
         Alert.alert('Xatolik', 'Ism va familiyangizni kiriting.');
         return;
       }
-      const res = await register(name, email, password, phone);
+      const res = await register(name, email, password, registerRole, phone);
       if (!res.success) {
         Alert.alert('Xatolik', res.error || 'Ro‘yxatdan o‘tishda xatolik yuz berdi');
       }
     } else {
-      // Kirish paytida tanlangan rol bo'yicha yoki avtomatik rolda kiradi
-      const res = await login(email, password, loginRole);
+      // Login paytida faqat email va parol yuboriladi.
+      // Tizim (MongoDB) rolni o'zi avtomatik aniqlaydi va kerakli ekranga yo'naltiradi.
+      const res = await login(email, password);
       if (!res.success) {
         Alert.alert('Xatolik', res.error || 'Kirishda xatolik yuz berdi');
       }
@@ -76,7 +75,7 @@ export const AuthScreen: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: insets.top + SPACING.md, paddingBottom: insets.bottom + SPACING.xl },
+          { paddingTop: insets.top + SPACING.lg, paddingBottom: insets.bottom + SPACING.xl },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -89,7 +88,7 @@ export const AuthScreen: React.FC = () => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <Flame color={COLORS.surface} size={28} />
+            <Flame color={COLORS.surface} size={30} />
           </LinearGradient>
           <Text style={styles.brandTitle}>TermoPlan</Text>
           <Text style={styles.brandSubtitle}>
@@ -118,51 +117,43 @@ export const AuthScreen: React.FC = () => {
 
         {/* Form Card */}
         <View style={styles.card}>
-          {/* 1. LOGIN REJIMI: Qaysi rolda kirishini belgilaydi */}
-          {activeTab === 'login' && (
+          {/* ======================= 1. RO'YXATDAN O'TISH: ROLNI TANLASH ======================= */}
+          {activeTab === 'register' && (
             <View style={{ marginBottom: SPACING.md }}>
-              <Text style={styles.inputLabel}>Kirish Qismi (Rol):</Text>
+              <Text style={styles.inputLabel}>Hisob Turi (Rolni tanlang):</Text>
               <View style={styles.roleGrid}>
+                {/* Foydalanuvchi roli */}
                 <TouchableOpacity
-                  style={[styles.roleCard, loginRole === 'user' && styles.activeRoleCard]}
-                  onPress={() => setLoginRole('user')}
+                  style={[styles.roleCard, registerRole === 'user' && styles.activeRoleCard]}
+                  onPress={() => setRegisterRole('user')}
                 >
-                  <View style={[styles.roleIconBox, loginRole === 'user' && styles.activeRoleIconBox]}>
-                    <User size={18} color={loginRole === 'user' ? COLORS.primary : COLORS.textSecondary} />
+                  <View style={[styles.roleIconBox, registerRole === 'user' && styles.activeRoleIconBox]}>
+                    <User size={18} color={registerRole === 'user' ? COLORS.primary : COLORS.textSecondary} />
                   </View>
-                  <Text style={[styles.roleTitle, loginRole === 'user' && styles.activeRoleTitle]}>
+                  <Text style={[styles.roleTitle, registerRole === 'user' && styles.activeRoleTitle]}>
                     Foydalanuvchi
                   </Text>
-                  <Text style={styles.roleDesc}>Shaxsiy loyihalar, chizmalar va smeta</Text>
+                  <Text style={styles.roleDesc}>Loyihalar tuzish, 2D/3D chizish va smeta</Text>
                 </TouchableOpacity>
 
+                {/* Support roli */}
                 <TouchableOpacity
-                  style={[styles.roleCard, loginRole === 'support' && styles.activeSupportRoleCard]}
-                  onPress={() => setLoginRole('support')}
+                  style={[styles.roleCard, registerRole === 'support' && styles.activeSupportRoleCard]}
+                  onPress={() => setRegisterRole('support')}
                 >
-                  <View style={[styles.roleIconBox, loginRole === 'support' && styles.activeSupportRoleIconBox]}>
-                    <ShieldCheck size={18} color={loginRole === 'support' ? '#7E22CE' : COLORS.textSecondary} />
+                  <View style={[styles.roleIconBox, registerRole === 'support' && styles.activeSupportRoleIconBox]}>
+                    <ShieldCheck size={18} color={registerRole === 'support' ? '#7E22CE' : COLORS.textSecondary} />
                   </View>
-                  <Text style={[styles.roleTitle, loginRole === 'support' && { color: '#7E22CE' }]}>
+                  <Text style={[styles.roleTitle, registerRole === 'support' && { color: '#7E22CE' }]}>
                     Support
                   </Text>
-                  <Text style={styles.roleDesc}>Nazorat paneli, statistika va audit</Text>
+                  <Text style={styles.roleDesc}>Nazorat paneli, hisobotlar va tizim auditi</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          {/* 2. REGISTRATSIYA REJIMI: Oddiy odam sifatida ro'yxatdan o'tadi */}
-          {activeTab === 'register' && (
-            <View style={styles.registerNotice}>
-              <Info size={16} color={COLORS.primary} />
-              <Text style={styles.registerNoticeText}>
-                Foydalanuvchi hisobi: Loyihalar tuzish, 2D/3D tyoply pol chizish va smeta chiqarish imkoniyati ochiladi.
-              </Text>
-            </View>
-          )}
-
-          {/* Register: Ism va Familiya */}
+          {/* Registratsiya: Ism va Familiya */}
           {activeTab === 'register' && (
             <>
               <Text style={styles.inputLabel}>Ism va Familiya *</Text>
@@ -170,7 +161,7 @@ export const AuthScreen: React.FC = () => {
                 <User size={18} color={COLORS.textMuted} />
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Masalan: Sardor Rahimov"
+                  placeholder="Masalan: Saidov Muzaffar"
                   placeholderTextColor={COLORS.textMuted}
                   value={name}
                   onChangeText={setName}
@@ -198,7 +189,7 @@ export const AuthScreen: React.FC = () => {
             <Mail size={18} color={COLORS.textMuted} />
             <TextInput
               style={styles.textInput}
-              placeholder={activeTab === 'login' && loginRole === 'support' ? 'support@termoplan.uz' : 'muhandis@termoplan.uz'}
+              placeholder="elektron.pochta@misol.uz"
               placeholderTextColor={COLORS.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -223,7 +214,10 @@ export const AuthScreen: React.FC = () => {
 
           {/* Submit Button */}
           <TouchableOpacity
-            style={[styles.submitBtn, activeTab === 'login' && loginRole === 'support' && { backgroundColor: '#7E22CE' }]}
+            style={[
+              styles.submitBtn,
+              activeTab === 'register' && registerRole === 'support' && { backgroundColor: '#7E22CE' },
+            ]}
             onPress={handleSubmit}
             disabled={isLoading}
           >
@@ -232,42 +226,12 @@ export const AuthScreen: React.FC = () => {
             ) : (
               <>
                 <Text style={styles.submitBtnText}>
-                  {activeTab === 'login'
-                    ? loginRole === 'support'
-                      ? 'Support Boshqaruviga Kirish'
-                      : 'Foydalanuvchi Sifatida Kirish'
-                    : 'Foydalanuvchi Bo‘lib Ro‘yxatdan O‘tish'}
+                  {activeTab === 'login' ? 'Tizimga Kirish' : 'Ro‘yxatdan O‘tish'}
                 </Text>
                 <ArrowRight size={18} color={COLORS.surface} />
               </>
             )}
           </TouchableOpacity>
-        </View>
-
-        {/* Quick 1-Tap Demo Logins */}
-        <View style={styles.quickSection}>
-          <View style={styles.quickHeader}>
-            <Sparkles size={16} color={COLORS.primary} />
-            <Text style={styles.quickTitle}>Tezkor Kirish (1-Bosishda Demo):</Text>
-          </View>
-
-          <View style={styles.quickBtnRow}>
-            <TouchableOpacity
-              style={styles.quickUserBtn}
-              onPress={() => quickLogin('user')}
-            >
-              <User size={16} color={COLORS.primaryDark} />
-              <Text style={styles.quickUserText}>👤 Foydalanuvchi</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickSupportBtn}
-              onPress={() => quickLogin('support')}
-            >
-              <ShieldCheck size={16} color="#7E22CE" />
-              <Text style={styles.quickSupportText}>🛡️ Support Nazoratchi</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -280,11 +244,11 @@ const styles = StyleSheet.create({
   },
   brandHeader: {
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   logoCircle: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: RADIUS.xl,
     alignItems: 'center',
     justifyContent: 'center',
@@ -292,16 +256,16 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   brandTitle: {
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     color: COLORS.primaryDark,
     letterSpacing: -0.5,
   },
   brandSubtitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 3,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -316,7 +280,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: RADIUS.sm,
   },
   activeTabBtn: {
@@ -324,7 +288,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   tabText: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
@@ -341,34 +305,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     ...SHADOWS.card,
   },
-  registerNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primaryBg,
-    borderRadius: RADIUS.md,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-    marginBottom: SPACING.md,
-  },
-  registerNoticeText: {
-    flex: 1,
-    fontSize: 11.5,
-    color: COLORS.primaryDark,
-    lineHeight: 16,
-  },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: COLORS.text,
     marginBottom: 6,
-    marginTop: 4,
+    marginTop: 6,
   },
   roleGrid: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 2,
+    marginTop: 4,
   },
   roleCard: {
     flex: 1,
@@ -387,8 +334,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF5FF',
   },
   roleIconBox: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
@@ -411,9 +358,9 @@ const styles = StyleSheet.create({
     color: COLORS.primaryDark,
   },
   roleDesc: {
-    fontSize: 9.5,
+    fontSize: 10,
     color: COLORS.textMuted,
-    lineHeight: 13,
+    lineHeight: 14,
   },
   inputBox: {
     flexDirection: 'row',
@@ -440,69 +387,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.md,
     paddingVertical: 14,
-    marginTop: SPACING.md,
+    marginTop: SPACING.lg,
     ...SHADOWS.card,
   },
   submitBtnText: {
     color: COLORS.surface,
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
-  },
-  quickSection: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.card,
-  },
-  quickHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: SPACING.sm,
-  },
-  quickTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-  },
-  quickBtnRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  quickUserBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: COLORS.primaryBg,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-    borderRadius: RADIUS.md,
-    paddingVertical: 10,
-  },
-  quickUserText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.primaryDark,
-  },
-  quickSupportBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#FAF5FF',
-    borderWidth: 1,
-    borderColor: '#E9D5FF',
-    borderRadius: RADIUS.md,
-    paddingVertical: 10,
-  },
-  quickSupportText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7E22CE',
   },
 });
